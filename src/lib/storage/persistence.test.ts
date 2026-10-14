@@ -46,7 +46,10 @@ describe("persistence", () => {
         phase: "Code",
         workMode: "ai_assisted",
         description: "x",
+        targetMinutes: 45,
         startedAt: "2026-10-14T14:00:00.000Z",
+        pausedAt: "2026-10-14T14:20:00.000Z",
+        pausedSeconds: 90,
       },
     };
     saveAppData(window.localStorage, withTimer);

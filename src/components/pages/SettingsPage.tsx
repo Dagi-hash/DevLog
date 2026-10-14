@@ -32,7 +32,7 @@ export function SettingsPage() {
             <Count label="Timer" value={data.activeTimer ? "Running" : "Idle"} />
           </dl>
           <p className="mt-5 text-meta text-fg-3">
-            Storage key <code className="font-mono text-fg-2">{STORAGE_KEY}</code>
+            Storage key <code className="text-fg-2">{STORAGE_KEY}</code>
           </p>
           <div className="mt-8 flex flex-col gap-4 border-t border-hairline pt-6 sm:flex-row sm:items-center sm:justify-between">
             <div>
@@ -73,7 +73,7 @@ export function SettingsPage() {
           <ol className="grid grid-cols-2 border-t border-hairline sm:grid-cols-4">
             {PHASES.map((p, i) => (
               <li key={p} className="flex items-baseline gap-3 border-b border-hairline py-3">
-                <span className="num font-mono text-meta text-fg-3">{String(i + 1).padStart(2, "0")}</span>
+                <span className="num text-meta text-fg-3">{String(i + 1).padStart(2, "0")}</span>
                 <span className="text-body text-fg">{p}</span>
               </li>
             ))}
@@ -122,7 +122,7 @@ function Count({ label, value }: { label: string; value: number | string }) {
   return (
     <div className="border-l border-hairline pl-4 first:border-l-0 first:pl-0">
       <dt className="text-meta text-fg-3">{label}</dt>
-      <dd className="num mt-1 font-mono text-lead text-fg">{value}</dd>
+      <dd className="num mt-1 text-lead text-fg">{value}</dd>
     </div>
   );
 }

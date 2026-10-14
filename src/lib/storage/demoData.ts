@@ -101,6 +101,7 @@ export function createDemoData(now: Date = new Date()): AppData {
       interruptionMinutes: interruption,
       netMinutes: grossMinutesBetween(startedAt, endedAt) - interruption,
       description: spec.description ?? '',
+      targetMinutes: null,
       createdAt: endedAt,
       updatedAt: endedAt,
     };

@@ -73,7 +73,7 @@ export function EstimateEditor({
         }
       }}
       className={cx(
-        "num h-9 w-[68px] rounded-none border-0 border-b bg-transparent px-1 text-right font-mono text-body text-fg placeholder:text-fg-4 transition-colors hover:border-fg-3 focus:border-fg focus:bg-surface focus:outline-none focus-visible:outline-none lg:h-8",
+        "num h-9 w-[68px] rounded-none border-0 border-b bg-transparent px-1 text-right text-body text-fg placeholder:text-fg-4 transition-colors hover:border-fg-3 focus:border-fg focus:bg-surface focus:outline-none focus-visible:outline-none lg:h-8",
         error ? "border-fg border-dashed" : "border-border",
       )}
     />

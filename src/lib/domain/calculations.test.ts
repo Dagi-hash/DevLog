@@ -22,6 +22,7 @@ function entry(partial: Partial<TimeEntry> & Pick<TimeEntry, "phase" | "workMode
     endedAt: at(partial.netMinutes * 60),
     interruptionMinutes: 0,
     description: "",
+    targetMinutes: null,
     createdAt: T0,
     updatedAt: T0,
     ...partial,

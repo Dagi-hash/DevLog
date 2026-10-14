@@ -67,7 +67,7 @@ export function TodayPage() {
             <h2 id="today-heading" className="text-meta text-fg-3">
               Today
             </h2>
-            <span className="num font-mono text-meta text-fg-2">{formatMinutes(sumNetMinutes(todays))}</span>
+            <span className="num text-meta text-fg-2">{formatMinutes(sumNetMinutes(todays))}</span>
           </div>
           {todays.length === 0 ? (
             <p className="border-t border-hairline py-5 text-body text-fg-3">Nothing recorded yet.</p>
@@ -84,9 +84,9 @@ export function TodayPage() {
                     <ModeGlyph mode={entry.workMode} className="text-fg-3" />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-body text-fg">{entry.phase}</span>
-                      <span className="num block font-mono text-tiny text-fg-3">{formatTime(entry.startedAt)}</span>
+                      <span className="num block text-tiny text-fg-3">{formatTime(entry.startedAt)}</span>
                     </span>
-                    <span className="num font-mono text-body text-fg-2">{formatMinutes(entry.netMinutes)}</span>
+                    <span className="num text-body text-fg-2">{formatMinutes(entry.netMinutes)}</span>
                   </button>
                 </li>
               ))}
@@ -104,7 +104,7 @@ export function TodayPage() {
 
 function DateHeading({ now }: { now: Date }) {
   return (
-    <h1 className="text-title font-semibold tracking-[-0.025em] text-fg" suppressHydrationWarning>
+    <h1 className="font-serif text-title tracking-[-0.02em] text-fg" suppressHydrationWarning>
       {formatLongDate(now)}
     </h1>
   );

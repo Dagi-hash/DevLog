@@ -39,6 +39,8 @@ export interface TimeEntry {
   /** Rounded gross minutes minus interruptions. Always recomputed from timestamps. */
   netMinutes: number;
   description: string;
+  /** Minutes the session was expected to take when it started; `null` if none was set. */
+  targetMinutes: number | null;
   createdAt: IsoTimestamp;
   updatedAt: IsoTimestamp;
 }
@@ -49,7 +51,13 @@ export interface ActiveTimer {
   phase: Phase;
   workMode: WorkMode;
   description: string;
+  /** Expected length ("done in 45m"), chosen at start and extendable; `null` = open-ended. */
+  targetMinutes: number | null;
   startedAt: IsoTimestamp;
+  /** Set while paused. Paused time becomes the entry's interruptions. */
+  pausedAt: IsoTimestamp | null;
+  /** Whole seconds spent in pauses that have already ended. */
+  pausedSeconds: number;
 }
 
 export interface AppData {

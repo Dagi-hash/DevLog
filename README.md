@@ -14,30 +14,43 @@ AI-assisted and agentic engineering. It answers four questions for one developer
 
 ## Features
 
-- **Today**: pick a project, PSP phase and work mode, then start a session.
+- **Today**: pick a project, PSP phase, how long it should take and work mode, then start.
+  The start time is taken from the moment you press Start; you never type it.
+  - "How long will it take?" offers 15m–2h, "No limit", and the rest of the phase's plan.
 - **Focus session**: starting a session opens a full-screen view.
   - The clock sits inside a dial of 60 second-ticks, with a fading trail behind the current second.
-  - The only controls are Stop and Minimize. A minimized session stays one tap away in the
-    sidebar (desktop) or the capsule nav (mobile).
+  - Controls are Pause / Resume, Stop and Minimize. A minimized session stays one tap away in
+    the sidebar (desktop) or the capsule nav (mobile).
+  - **Pause** (or Space) freezes the clock. Paused time is excluded from the clock and the
+    expected end, and becomes the entry's interruptions, prefilled in the stop sheet.
+  - **Switch phase**: "Next: Compile" (one tap) or "Switch phase…" (any phase) saves the
+    session and immediately times the new phase on the same project and work mode. An Undo
+    appears for a few seconds. A session under 30 seconds is just relabelled.
   - The timer survives refreshes, closed tabs, browser restarts, phone locking and Mac sleep,
     because elapsed time is always `now − saved start timestamp`, never a counter.
+  - With an expected length, a thin outer ring fills up and the view shows time left (or over).
+    Near or past the end, **+15 min** extends it.
   - Stop opens a sheet for interruptions and a description, then saves exactly one entry.
-    Discarding needs a second tap.
+    If the session ran well past its expected length (a forgotten timer), the sheet offers to
+    end the entry at the planned time instead. Discarding needs a second tap.
 - **Projects**: create, rename, complete, archive and restore. Completed and archived projects
   can't be timed, but their records and summaries are kept.
 - **Plan and actuals**: original and revised estimates per phase, actuals derived from saved
   entries, variance against both in minutes and percent, a totals row, and an optional
   Manual / AI-Assisted / AI-Agent breakdown. A table on desktop, compact cards on phones.
 - **Time log**: chronological entries grouped by day, filterable by project and work mode,
-  with manual add, edit and delete (with confirmation).
+  with manual add, edit and delete (with confirmation). Adding past work asks only
+  **how long** ("45", "1h 30m", "1:30") and **when it finished** (now, by default); the start is
+  derived. Exact start and end fields are one tap away and are what editing shows.
 - **Settings** (sidebar on desktop, top-bar icon on mobile): data notes, reference definitions
   and a confirmed **Reset demo data**.
 
 ## Design
 
-- **Identity:** the `>Log` wordmark is monoline geometry. A prompt chevron is followed by
-  "Log", whose "o" is a clock face. The `>L` monogram is the app icon and the collapsed
-  sidebar mark (`src/components/Logo.tsx`).
+- **Identity:** the wordmark is simply `>Log` set in the serif; `>L` is the collapsed sidebar
+  mark and the favicon (`src/components/Logo.tsx`). The favicon (`src/app/icon.png`),
+  iOS icon (`src/app/apple-icon.png`) and PWA icons (`public/icons/`, including a padded
+  maskable one for Android) are rendered from the same Newsreader glyphs.
 - **Monochrome only.** Tokens live in `src/app/globals.css` (`@theme`): canvas `#0A0A0A`,
   surfaces `#171717` / `#262626`, border `#343434`, text `#FAFAFA` / `#A3A3A3` / `#737373`,
   plus an inverse pair for primary actions. Type sizes, radii and motion are tokens too.
@@ -45,7 +58,8 @@ AI-assisted and agentic engineering. It answers four questions for one developer
   shows one figure, one bar and the phase table.
 - **No colour coding.** Work modes use shape (Manual ○, AI-Assisted ◐, AI-Agent ●, drawn as
   SVG). Over-plan time is hatched. Variance relies on its sign.
-- **Type:** Geist Sans for text; Geist Mono with tabular figures for times and durations.
+- **Type:** Inter for the interface, with tabular figures wherever numbers line up; Newsreader
+  (serif) for titles, dialog headings and the figures worth looking at, including the clock.
 - **Navigation:**
   - Desktop has a quiet sidebar that collapses to an icon rail. The state is remembered.
   - Mobile has a floating capsule nav. The current tab expands to show its label, and a

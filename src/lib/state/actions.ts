@@ -2,9 +2,9 @@
  * Pure state transitions. Each takes the current AppData and returns a new one,
  * or throws a DomainError with a user-facing message. No React, no storage.
  */
-import { grossMinutesBetween } from '../domain/calculations';
+import { elapsedSeconds, grossMinutes, grossMinutesBetween, pausedSecondsAt } from '../domain/calculations';
 import { PHASES, type Phase, type ProjectStatus, type WorkMode } from '../domain/psp';
-import type { AppData, Project, TimeEntry } from '../domain/types';
+import type { ActiveTimer, AppData, Project, TimeEntry } from '../domain/types';
 import { INTERRUPTION_TOO_LARGE, isValid, validateEntry, type EntryDraft } from '../domain/validation';
 
 export class DomainError extends Error {}
@@ -149,13 +149,15 @@ export function setRevisedEstimate(
 
 export function startTimer(
   data: AppData,
-  input: { projectId: string; phase: Phase; workMode: WorkMode; description: string },
+  input: { projectId: string; phase: Phase; workMode: WorkMode; description: string; targetMinutes?: number | null },
   nowIso: string,
   sessionId: string = createId(),
 ): AppData {
   if (data.activeTimer) throw new DomainError('A timer is already running. Stop it before starting another.');
   const project = findProject(data, input.projectId);
   if (project.status !== 'active') throw new DomainError('Only active projects can be timed.');
+  const targetMinutes = input.targetMinutes ?? null;
+  if (targetMinutes !== null) assertTarget(targetMinutes);
   return {
     ...data,
     activeTimer: {
@@ -164,9 +166,87 @@ export function startTimer(
       phase: input.phase,
       workMode: input.workMode,
       description: input.description.trim(),
+      targetMinutes,
       startedAt: nowIso,
+      pausedAt: null,
+      pausedSeconds: 0,
     },
   };
+}
+
+function assertTarget(minutes: number) {
+  if (!Number.isSafeInteger(minutes) || minutes < 1) throw new DomainError('Expected length must be at least 1 minute.');
+}
+
+function currentTimer(data: AppData, sessionId: string): ActiveTimer {
+  const timer = data.activeTimer;
+  if (!timer || timer.sessionId !== sessionId) throw new DomainError('This timer is no longer running.');
+  return timer;
+}
+
+/** Changes the running session's expected length (e.g. "+15m"); `null` makes it open-ended. */
+export function setTimerTarget(data: AppData, sessionId: string, minutes: number | null): AppData {
+  const timer = currentTimer(data, sessionId);
+  if (minutes !== null) assertTarget(minutes);
+  return { ...data, activeTimer: { ...timer, targetMinutes: minutes } };
+}
+
+/** Pauses the session. Time spent paused is recorded as interruptions when it is saved. */
+export function pauseTimer(data: AppData, sessionId: string, nowIso: string): AppData {
+  const timer = currentTimer(data, sessionId);
+  if (timer.pausedAt) return data;
+  return { ...data, activeTimer: { ...timer, pausedAt: nowIso } };
+}
+
+export function resumeTimer(data: AppData, sessionId: string, nowIso: string): AppData {
+  const timer = currentTimer(data, sessionId);
+  if (!timer.pausedAt) return data;
+  return {
+    ...data,
+    activeTimer: { ...timer, pausedAt: null, pausedSeconds: pausedSecondsAt(timer, nowIso) },
+  };
+}
+
+/** Interruption minutes implied by a session's pauses, never more than its gross minutes. */
+export function pausedInterruption(timer: ActiveTimer, endedAt: string | number): number {
+  return Math.min(grossMinutes(pausedSecondsAt(timer, endedAt)), grossMinutes(elapsedSeconds(timer.startedAt, endedAt)));
+}
+
+/**
+ * Moves straight on to another phase: saves the running session as an entry ending
+ * now (pauses become its interruptions) and starts timing `phase` on the same
+ * project and work mode from that same instant. A session too short to record
+ * (under 30 seconds) is simply relabelled instead.
+ */
+export function switchTimerPhase(
+  data: AppData,
+  input: { sessionId: string; phase: Phase; at: string },
+  nowIso: string,
+  entryId: string = createId(),
+  newSessionId: string = createId(),
+): AppData {
+  const timer = currentTimer(data, input.sessionId);
+  if (input.phase === timer.phase) return data;
+  if (grossMinutesBetween(timer.startedAt, input.at) === 0) {
+    return { ...data, activeTimer: { ...timer, phase: input.phase } };
+  }
+  const saved = saveTimerEntry(
+    data,
+    {
+      sessionId: timer.sessionId,
+      endedAt: input.at,
+      interruption: String(pausedInterruption(timer, input.at)),
+      description: timer.description,
+    },
+    nowIso,
+    entryId,
+  );
+  return startTimer(
+    saved,
+    { projectId: timer.projectId, phase: input.phase, workMode: timer.workMode, description: '' },
+    input.at,
+    newSessionId,
+  );
 }
 
 /**
@@ -211,6 +291,7 @@ export function saveTimerEntry(
     interruptionMinutes: validation.interruptionMinutes,
     netMinutes: validation.net,
     description: input.description.trim(),
+    targetMinutes: timer.targetMinutes,
     createdAt: nowIso,
     updatedAt: nowIso,
   };
@@ -220,6 +301,17 @@ export function saveTimerEntry(
     entries: [...data.entries, entry],
     activeTimer: null,
   };
+}
+
+/**
+ * Reverses a phase switch made moments ago by restoring the data from before it.
+ * Refused once anything else has changed, so later work is never lost.
+ */
+export function undoPhaseSwitch(current: AppData, before: AppData, newSessionId: string): AppData {
+  if (current.activeTimer?.sessionId !== newSessionId || current.entries.length !== before.entries.length + 1) {
+    throw new DomainError('Something changed since the switch, so it can’t be undone here. Edit the entry in the time log.');
+  }
+  return before;
 }
 
 export function discardTimer(data: AppData, sessionId: string): AppData {
@@ -264,6 +356,7 @@ export function addManualEntry(
     sessionId: null,
     ...fields,
     description: draft.description.trim(),
+    targetMinutes: null,
     createdAt: nowIso,
     updatedAt: nowIso,
   };

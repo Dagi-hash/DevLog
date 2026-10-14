@@ -15,6 +15,7 @@ export function Dialog({
   children,
   footer,
   onSubmit,
+  size = "md",
 }: {
   open: boolean;
   onClose: () => void;
@@ -24,6 +25,8 @@ export function Dialog({
   footer: ReactNode;
   /** When set, the dialog body is a form and Enter submits it. */
   onSubmit?: (event: FormEvent<HTMLFormElement>) => void;
+  /** "lg" widens the desktop panel for forms with side-by-side controls. */
+  size?: "md" | "lg";
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
@@ -65,7 +68,7 @@ export function Dialog({
     <>
       <div className="flex items-start justify-between gap-4 px-5 pt-5 sm:px-6 sm:pt-6">
         <div className="min-w-0">
-          <h2 id={titleId} className="text-heading font-semibold tracking-[-0.01em] text-fg">
+          <h2 id={titleId} className="font-serif text-[26px] leading-tight tracking-[-0.01em] text-fg">
             {title}
           </h2>
           {description && (
@@ -94,6 +97,7 @@ export function Dialog({
     <dialog
       ref={ref}
       className="app-dialog focus-visible:outline-none"
+      data-size={size}
       tabIndex={-1}
       aria-labelledby={titleId}
       aria-describedby={description ? descriptionId : undefined}

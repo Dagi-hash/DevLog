@@ -1,10 +1,10 @@
 "use client";
 
-import { FolderClosed, PanelLeftClose, PanelLeftOpen, ScrollText, Settings2, Timer, X } from "lucide-react";
+import { FolderClosed, PanelLeftClose, PanelLeftOpen, Pause, ScrollText, Settings2, Timer, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
-import { elapsedSeconds } from "@/lib/domain/calculations";
+import { workingSeconds } from "@/lib/domain/calculations";
 import { formatClock } from "@/lib/domain/format";
 import type { AppData } from "@/lib/domain/types";
 import { useNow } from "@/lib/hooks/useNow";
@@ -70,7 +70,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             className={cx("mb-6 flex h-11 items-center rounded-sm", collapsed ? "mx-auto justify-center px-2" : "mx-3 px-3")}
             aria-label="DevLog — Today"
           >
-            {collapsed ? <Monogram className="size-[22px]" /> : <Wordmark className="h-[19px]" />}
+            {collapsed ? <Monogram /> : <Wordmark />}
           </Link>
 
           <nav aria-label="Main" className="flex flex-col gap-0.5 px-2.5">
@@ -106,7 +106,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <header className="sticky top-0 z-20 bg-canvas/85 pt-[var(--safe-top)] backdrop-blur-md md:hidden">
           <div className="flex h-[var(--mobile-bar-height)] items-center justify-between pr-1.5 pl-5">
             <Link href="/" className="flex h-11 items-center" aria-label="DevLog — Today">
-              <Wordmark className="h-[17px]" />
+              <Wordmark className="text-[22px]" />
             </Link>
             <Link
               href={SETTINGS.href}
@@ -180,15 +180,15 @@ function SidebarSession({ data, collapsed, onOpen }: { data: AppData; collapsed:
     <button
       type="button"
       onClick={onOpen}
-      aria-label={`Return to focus session: ${timer.phase}`}
+      aria-label={`Return to focus session: ${timer.phase}${timer.pausedAt ? " (paused)" : ""}`}
       className={cx(
         "mb-2 flex h-11 items-center gap-2.5 rounded-md border border-border text-left transition-colors hover:border-border-strong",
         collapsed ? "flex-col justify-center gap-1 px-0 py-1.5 h-auto" : "px-[15px]",
       )}
     >
-      <RecordingDot className="size-1.5" />
-      <span className={cx("num font-mono text-fg", collapsed ? "text-tiny" : "text-meta")}>
-        {compactClock(elapsedSeconds(timer.startedAt, now))}
+      {timer.pausedAt ? <Pause className="size-3 text-fg-2" aria-hidden /> : <RecordingDot className="size-1.5" />}
+      <span className={cx("num", timer.pausedAt ? "text-fg-2" : "text-fg", collapsed ? "text-tiny" : "text-meta")}>
+        {compactClock(workingSeconds(timer, now))}
       </span>
       {!collapsed && <span className="truncate text-meta text-fg-3">{timer.phase}</span>}
     </button>
@@ -226,11 +226,15 @@ function CapsuleSession({ data, onOpen }: { data: AppData; onOpen: () => void })
     <button
       type="button"
       onClick={onOpen}
-      aria-label={`Return to focus session: ${timer.phase}`}
+      aria-label={`Return to focus session: ${timer.phase}${timer.pausedAt ? " (paused)" : ""}`}
       className="mr-1 flex h-full items-center gap-2 rounded-full bg-inverse pr-4 pl-3.5 text-inverse-fg transition-transform active:scale-[0.97]"
     >
-      <span aria-hidden className="size-1.5 animate-pulse-dot rounded-full bg-inverse-fg" />
-      <span className="num font-mono text-meta font-medium">{compactClock(elapsedSeconds(timer.startedAt, now))}</span>
+      {timer.pausedAt ? (
+        <Pause className="size-3 fill-current" aria-hidden />
+      ) : (
+        <span aria-hidden className="size-1.5 animate-pulse-dot rounded-full bg-inverse-fg" />
+      )}
+      <span className="num text-meta font-medium">{compactClock(workingSeconds(timer, now))}</span>
     </button>
   );
 }
@@ -239,7 +243,10 @@ function CapsuleSession({ data, onOpen }: { data: AppData; onOpen: () => void })
 function TitleTicker({ data }: { data: AppData }) {
   const now = useNow();
   const timer = data.activeTimer!;
-  const title = `${formatClock(elapsedSeconds(timer.startedAt, now))} · ${timer.phase} — DevLog`;
+  const seconds = workingSeconds(timer, now);
+  const over = timer.targetMinutes !== null && seconds > timer.targetMinutes * 60;
+  const state = timer.pausedAt ? "Paused · " : "";
+  const title = `${state}${formatClock(seconds)}${over ? " · over" : ""} · ${timer.phase} — DevLog`;
   useEffect(() => {
     const previous = document.title;
     document.title = title;

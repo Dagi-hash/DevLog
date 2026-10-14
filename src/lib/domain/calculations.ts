@@ -1,5 +1,5 @@
 import { PHASES, WORK_MODES, type Phase, type WorkMode } from './psp';
-import type { PhaseEstimate, TimeEntry } from './types';
+import type { ActiveTimer, PhaseEstimate, TimeEntry } from './types';
 
 // ---------------------------------------------------------------------------
 // Durations
@@ -16,6 +16,19 @@ export function elapsedSeconds(startedAt: string | number, endedAt: string | num
 /** Half-up rounding to whole minutes: 0–29 s → 0, 30–89 s → 1, 90–149 s → 2. */
 export function grossMinutes(seconds: number): number {
   return Math.floor((Math.max(0, seconds) + 30) / 60);
+}
+
+/** Seconds a timer has spent paused up to `at`, including a pause still in progress. */
+export function pausedSecondsAt(timer: Pick<ActiveTimer, 'pausedAt' | 'pausedSeconds'>, at: string | number): number {
+  return timer.pausedSeconds + (timer.pausedAt ? elapsedSeconds(timer.pausedAt, at) : 0);
+}
+
+/** Time actually worked on a running timer: wall-clock elapsed minus pauses. */
+export function workingSeconds(
+  timer: Pick<ActiveTimer, 'startedAt' | 'pausedAt' | 'pausedSeconds'>,
+  at: string | number,
+): number {
+  return Math.max(0, elapsedSeconds(timer.startedAt, at) - pausedSecondsAt(timer, at));
 }
 
 export function grossMinutesBetween(startedAt: string | number, endedAt: string | number): number {

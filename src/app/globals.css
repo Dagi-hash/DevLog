@@ -28,8 +28,8 @@
   --color-fg-4: #525252;
 
   /* Type */
-  --font-sans: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", Menlo, monospace;
+  --font-sans: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-serif: var(--font-newsreader), "Iowan Old Style", Georgia, serif;
 
   --text-micro: 10.5px;
   --text-micro--letter-spacing: 0.08em;
@@ -43,11 +43,11 @@
   --text-body--line-height: 1.5;
   --text-lead: 16px;
   --text-lead--line-height: 1.4;
-  --text-heading: 20px;
-  --text-heading--line-height: 1.25;
-  --text-title: 28px;
-  --text-title--line-height: 1.15;
-  --text-figure: 40px;
+  --text-heading: 26px;
+  --text-heading--line-height: 1.2;
+  --text-title: 40px;
+  --text-title--line-height: 1.05;
+  --text-figure: 56px;
   --text-figure--line-height: 1;
   --text-timer: 120px;
   --text-timer--line-height: 0.9;
@@ -94,6 +94,14 @@
   --mobile-nav-gap: 14px;
 }
 
+/* The serif titles and figures step down on phones. */
+@media (max-width: 639px) {
+  :root {
+    --text-title: 32px;
+    --text-figure: 46px;
+  }
+}
+
 @layer base {
   html {
     background: var(--color-canvas);
@@ -135,6 +143,11 @@
 /* Tabular figures everywhere numbers need to line up. */
 .num {
   font-variant-numeric: tabular-nums;
+}
+
+/* Inter's alternates: open digits and a straight-sided 1 read calmer in tables. */
+body {
+  font-feature-settings: "cv11", "ss01";
 }
 
 /* Small uppercase metadata labels. Use sparingly. */
@@ -195,6 +208,11 @@ dialog.app-dialog {
   max-height: min(100dvh - 48px, 760px);
   box-shadow: 0 32px 80px rgb(0 0 0 / 0.6);
   overflow: hidden;
+}
+@media (min-width: 640px) {
+  dialog.app-dialog[data-size="lg"] {
+    width: min(100% - 32px, 540px);
+  }
 }
 dialog.app-dialog[open] {
   display: flex;

@@ -5,13 +5,15 @@ export interface StartPrefs {
   projectId: string | null;
   phase: Phase;
   workMode: WorkMode;
+  /** Last expected session length; `null` = open-ended. */
+  targetMinutes: number | null;
 }
 
 const PREFS_KEY = "devlog:prefs";
 const LEGACY_PREFS_KEY = "psp-workbench:prefs";
 
 export function loadPrefs(): StartPrefs {
-  const fallback: StartPrefs = { projectId: null, phase: "Plan", workMode: "manual" };
+  const fallback: StartPrefs = { projectId: null, phase: "Plan", workMode: "manual", targetMinutes: null };
   try {
     const raw = window.localStorage.getItem(PREFS_KEY) ?? window.localStorage.getItem(LEGACY_PREFS_KEY);
     if (!raw) return fallback;
@@ -22,6 +24,10 @@ export function loadPrefs(): StartPrefs {
       projectId: typeof p.projectId === "string" ? p.projectId : null,
       phase: isPhase(p.phase) ? p.phase : fallback.phase,
       workMode: isWorkMode(p.workMode) ? p.workMode : fallback.workMode,
+      targetMinutes:
+        typeof p.targetMinutes === "number" && Number.isSafeInteger(p.targetMinutes) && p.targetMinutes > 0
+          ? p.targetMinutes
+          : null,
     };
   } catch {
     return fallback;

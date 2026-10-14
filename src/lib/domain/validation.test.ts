@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { INTERRUPTION_TOO_LARGE, isValid, parseWholeMinutes, validateEntry, type EntryDraft } from "./validation";
+import { INTERRUPTION_TOO_LARGE, isValid, parseDuration, parseWholeMinutes, validateEntry, type EntryDraft } from "./validation";
 
 const base: EntryDraft = {
   projectId: "p1",
@@ -57,5 +57,35 @@ describe("validateEntry", () => {
   it("rejects invalid dates, phases, modes and missing project", () => {
     const v = validateEntry({ projectId: "", phase: "Lunch", workMode: "robot", startedAt: "x", endedAt: "", interruption: "0" });
     expect(Object.keys(v.errors).sort()).toEqual(["endedAt", "phase", "projectId", "startedAt", "workMode"]);
+  });
+});
+
+describe("parseDuration", () => {
+  it.each([
+    ["45", 45],
+    ["45m", 45],
+    ["45 min", 45],
+    ["1h", 60],
+    ["1h30", 90],
+    ["1h 30m", 90],
+    ["1:30", 90],
+    ["1.5h", 90],
+    ["2 hours", 120],
+    ["0", 0],
+  ])("reads %s as %i minutes", (raw, minutes) => {
+    expect(parseDuration(raw)).toBe(minutes);
+  });
+  it.each(["", "abc", "1.5", "-5", "1:75", "h"])("rejects %s", (raw) => {
+    expect(parseDuration(raw)).toBeNull();
+  });
+});
+
+describe("future end check", () => {
+  const latestEndMs = Date.parse(base.endedAt);
+  it("allows an end up to a minute ahead of now", () => {
+    expect(isValid(validateEntry({ ...base, endedAt: "2026-10-14T09:10:59.000Z" }, { latestEndMs }))).toBe(true);
+  });
+  it("rejects an end in the future", () => {
+    expect(validateEntry({ ...base, endedAt: "2026-10-14T09:30:00.000Z" }, { latestEndMs }).errors.endedAt).toMatch(/future/);
   });
 });

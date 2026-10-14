@@ -31,7 +31,31 @@ export function parseWholeMinutes(raw: string): number | null {
   return Number.isSafeInteger(value) ? value : null;
 }
 
-export function validateEntry(draft: EntryDraft): EntryValidation {
+/**
+ * Parses a human duration into whole minutes: "45", "45m", "45 min", "1h", "1h30",
+ * "1h 30m", "1:30", "1.5h". A bare number is minutes. Returns null when unreadable.
+ */
+export function parseDuration(raw: string): number | null {
+  const s = raw.trim().toLowerCase().replace(/\s+/g, '');
+  if (s === '') return null;
+  let m: RegExpMatchArray | null;
+  if ((m = s.match(/^(\d+)(?:m|min|mins|minutes?)?$/))) return safe(Number(m[1]));
+  if ((m = s.match(/^(\d+):([0-5]\d)$/))) return safe(Number(m[1]) * 60 + Number(m[2]));
+  if ((m = s.match(/^(\d+(?:\.\d+)?)(?:h|hr|hrs|hours?)$/))) return safe(Math.round(Number(m[1]) * 60));
+  if ((m = s.match(/^(\d+)(?:h|hr|hrs|hours?)(\d+)(?:m|min|mins|minutes?)?$/))) {
+    return safe(Number(m[1]) * 60 + Number(m[2]));
+  }
+  return null;
+}
+
+function safe(value: number): number | null {
+  return Number.isSafeInteger(value) ? value : null;
+}
+
+/** One minute of slack so a just-now end time never trips the future check. */
+const FUTURE_SLACK_MS = 60_000;
+
+export function validateEntry(draft: EntryDraft, options: { latestEndMs?: number } = {}): EntryValidation {
   const errors: EntryValidation['errors'] = {};
   if (!draft.projectId) errors.projectId = 'Choose a project.';
   if (!isPhase(draft.phase)) errors.phase = 'Choose a phase.';
@@ -46,6 +70,9 @@ export function validateEntry(draft: EntryDraft): EntryValidation {
   if (Number.isFinite(start) && Number.isFinite(end)) {
     if (end < start) errors.endedAt = 'End must be at or after the start.';
     else gross = grossMinutesBetween(start, end);
+    if (options.latestEndMs !== undefined && end > options.latestEndMs + FUTURE_SLACK_MS) {
+      errors.endedAt = 'That’s in the future. Log work once it’s done.';
+    }
   }
 
   const interruptionMinutes = parseWholeMinutes(draft.interruption);

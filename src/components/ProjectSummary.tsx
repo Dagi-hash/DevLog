@@ -41,7 +41,7 @@ export function ProjectSummary({ project, data }: { project: Project; data: AppD
         onCommit={(m) => commitOriginal(row, m)}
       />
     ) : (
-      <span className="num font-mono text-fg-2">{row.original}</span>
+      <span className="num text-fg-2">{row.original}</span>
     );
 
   const revised = (row: SummaryRow) =>
@@ -55,7 +55,7 @@ export function ProjectSummary({ project, data }: { project: Project; data: AppD
         onCommit={(m) => commitRevised(row, m)}
       />
     ) : (
-      <span className="num font-mono text-fg-3">{row.revised ?? "—"}</span>
+      <span className="num text-fg-3">{row.revised ?? "—"}</span>
     );
 
   const totals = summary.totals;
@@ -129,7 +129,7 @@ export function ProjectSummary({ project, data }: { project: Project; data: AppD
                 <Td>{original(row)}</Td>
                 <Td>{revised(row)}</Td>
                 <Td>
-                  <span className="num font-mono font-medium text-fg">{row.actual}</span>
+                  <span className="num font-medium text-fg">{row.actual}</span>
                 </Td>
                 {showModes && <ModeCells byMode={row.byMode} />}
                 <VarianceCells actual={row.actual} estimate={row.original} />
@@ -141,16 +141,16 @@ export function ProjectSummary({ project, data }: { project: Project; data: AppD
             <tr className="border-t border-fg-3">
               <th scope="row" className="py-3.5 pr-4 text-left font-semibold text-fg">Total</th>
               <Td>
-                <span className="num font-mono font-medium text-fg">{totals.original}</span>
+                <span className="num font-medium text-fg">{totals.original}</span>
               </Td>
               <Td>
-                <span className="num font-mono text-fg-2" title={totals.revised !== null ? "Revised where set, original elsewhere" : undefined}>
+                <span className="num text-fg-2" title={totals.revised !== null ? "Revised where set, original elsewhere" : undefined}>
                   {totals.revised ?? "—"}
                   {totals.revised !== null && "*"}
                 </span>
               </Td>
               <Td>
-                <span className="num font-mono font-semibold text-fg">{totals.actual}</span>
+                <span className="num font-semibold text-fg">{totals.actual}</span>
               </Td>
               {showModes && <ModeCells byMode={totals.byMode} strong />}
               <VarianceCells actual={totals.actual} estimate={totals.original} strong />
@@ -170,7 +170,7 @@ export function ProjectSummary({ project, data }: { project: Project; data: AppD
           <li key={row.phase} className="border-b border-hairline py-4">
             <div className="flex items-baseline justify-between gap-4">
               <span className="text-lead text-fg">{row.phase}</span>
-              <span className="num font-mono text-lead font-medium text-fg">
+              <span className="num text-lead font-medium text-fg">
                 {row.actual}
                 <span className="ml-1 text-meta font-normal text-fg-3">min</span>
               </span>
@@ -191,17 +191,17 @@ export function ProjectSummary({ project, data }: { project: Project; data: AppD
         <li className="py-4">
           <div className="flex items-baseline justify-between gap-4">
             <span className="text-lead font-semibold text-fg">Total</span>
-            <span className="num font-mono text-lead font-semibold text-fg">
+            <span className="num text-lead font-semibold text-fg">
               {totals.actual}
               <span className="ml-1 text-meta font-normal text-fg-3">min</span>
             </span>
           </div>
           <div className="mt-3 grid grid-cols-[72px_72px_1fr] items-end gap-x-4">
             <MobileField label="Original">
-              <span className="num font-mono font-medium">{totals.original}</span>
+              <span className="num font-medium">{totals.original}</span>
             </MobileField>
             <MobileField label="Revised*">
-              <span className="num font-mono text-fg-2">{totals.revised ?? "—"}</span>
+              <span className="num text-fg-2">{totals.revised ?? "—"}</span>
             </MobileField>
             <div className="text-right">
               <MobileVariance actual={totals.actual} estimate={totals.original} label="vs original" />
@@ -254,12 +254,12 @@ function VarianceCells({ actual, estimate, last, strong }: { actual: number; est
   const pct = variancePercent(actual, estimate);
   return (
     <>
-      <td className={cx("num py-2 pr-3 pl-6 text-right font-mono whitespace-nowrap", toneFor(diff, strong))}>
+      <td className={cx("num py-2 pr-3 pl-6 text-right whitespace-nowrap", toneFor(diff, strong))}>
         {formatSignedMinutes(diff)}
       </td>
       <td
         className={cx(
-          "num px-3 py-2 text-right font-mono whitespace-nowrap",
+          "num px-3 py-2 text-right whitespace-nowrap",
           pct.kind === "unestimated" ? "font-sans text-meta text-fg" : toneFor(diff, strong),
           last && "pr-0",
         )}
@@ -273,8 +273,8 @@ function VarianceCells({ actual, estimate, last, strong }: { actual: number; est
 function EmptyVariance() {
   return (
     <>
-      <td className="num py-2 pr-3 pl-6 text-right font-mono text-fg-4">—</td>
-      <td className="num py-2 pr-0 pl-3 text-right font-mono text-fg-4">—</td>
+      <td className="num py-2 pr-3 pl-6 text-right text-fg-4">—</td>
+      <td className="num py-2 pr-0 pl-3 text-right text-fg-4">—</td>
     </>
   );
 }
@@ -283,7 +283,7 @@ function ModeCells({ byMode, strong }: { byMode: ModeMinutes; strong?: boolean }
   return (
     <>
       {WORK_MODES.map((m) => (
-        <td key={m} className={cx("num px-3 py-2 text-right font-mono whitespace-nowrap", strong ? "text-fg-2" : "text-fg-3")}>
+        <td key={m} className={cx("num px-3 py-2 text-right whitespace-nowrap", strong ? "text-fg-2" : "text-fg-3")}>
           {byMode[m]}
         </td>
       ))}
@@ -306,7 +306,7 @@ function MobileVariance({ actual, estimate, label }: { actual: number; estimate:
   return (
     <p className="num text-meta leading-6">
       <span className="text-fg-3">{label} </span>
-      <span className={cx("font-mono", toneFor(diff))}>
+      <span className={toneFor(diff)}>
         {formatSignedMinutes(diff)} · {formatPercentVariance(pct)}
       </span>
     </p>
@@ -320,7 +320,7 @@ function MobileModes({ byMode }: { byMode: ModeMinutes }) {
         <span key={m} className="num inline-flex items-center gap-1.5 text-meta text-fg-3">
           <ModeGlyph mode={m} className="size-2" />
           {WORK_MODE_INFO[m].short}
-          <span className="font-mono text-fg-2">{byMode[m]}</span>
+          <span className="text-fg-2">{byMode[m]}</span>
         </span>
       ))}
     </div>

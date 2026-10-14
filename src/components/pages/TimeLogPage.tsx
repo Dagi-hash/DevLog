@@ -36,7 +36,7 @@ export function TimeLogPage() {
 
       <div className="mt-10 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <p className="num text-body text-fg-3" aria-live="polite">
-          <span className="font-mono text-fg">{formatMinutes(sumNetMinutes(filtered))}</span> across {filtered.length} entr
+          <span className="text-fg">{formatMinutes(sumNetMinutes(filtered))}</span> across {filtered.length} entr
           {filtered.length === 1 ? "y" : "ies"}
           {filtering && <span> · {formatMinutes(sumNetMinutes(data.entries))} overall</span>}
         </p>

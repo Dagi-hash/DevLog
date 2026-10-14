@@ -1,18 +1,18 @@
 "use client";
 
-import { ArrowRight, Maximize2, Play } from "lucide-react";
+import { ArrowRight, Maximize2, Pause, Play } from "lucide-react";
 import Link from "next/link";
 import { useState, type ReactNode } from "react";
-import { buildProjectSummary, elapsedSeconds } from "@/lib/domain/calculations";
-import { formatClock, formatMinutes } from "@/lib/domain/format";
+import { buildProjectSummary, workingSeconds } from "@/lib/domain/calculations";
+import { formatClock, formatMinutes, formatTime } from "@/lib/domain/format";
 import { PHASES, WORK_MODES, WORK_MODE_INFO, type Phase, type WorkMode } from "@/lib/domain/psp";
-import type { AppData } from "@/lib/domain/types";
+import type { ActiveTimer, AppData } from "@/lib/domain/types";
 import { useNow } from "@/lib/hooks/useNow";
 import { startTimer } from "@/lib/state/actions";
 import { loadPrefs, savePrefs } from "@/lib/state/prefs";
 import { run } from "@/lib/state/store";
 import { useFocus } from "./focus";
-import { Button, InlineAlert, ModeGlyph, RecordingDot, Segmented, Select, TextInput, cx } from "./ui";
+import { Button, ChipGroup, InlineAlert, ModeGlyph, RecordingDot, Segmented, Select, TextInput, cx } from "./ui";
 
 /** The Today surface: compose the next session, or return to the one in progress. */
 export function TimerPanel({
@@ -43,6 +43,10 @@ function Label({ htmlFor, children }: { htmlFor?: string; children: ReactNode })
   );
 }
 
+/** Common session lengths offered when starting, in minutes. */
+const LENGTHS = [15, 25, 45, 60, 90, 120];
+const OPEN = "open";
+
 function Composer({
   data,
   projectId,
@@ -57,23 +61,29 @@ function Composer({
   const [phase, setPhase] = useState<Phase>(prefs.phase);
   const [workMode, setWorkMode] = useState<WorkMode>(prefs.workMode);
   const [description, setDescription] = useState("");
+  const [target, setTarget] = useState<number | null>(prefs.targetMinutes);
   const [error, setError] = useState<string | null>(null);
 
   const activeProjects = data.projects.filter((p) => p.status === "active");
   const project = activeProjects.find((p) => p.id === projectId) ?? null;
   const row = project ? buildProjectSummary(project.id, data.estimates, data.entries).rows.find((r) => r.phase === phase) : null;
+  // What's left of this phase's plan is often the best guess for the session.
+  const leftInPlan = row ? (row.revised ?? row.original) - row.actual : 0;
+  const lengths = [...LENGTHS];
+  if (leftInPlan > 0 && !lengths.includes(leftInPlan)) lengths.push(leftInPlan);
+  lengths.sort((a, b) => a - b);
 
   function start() {
     if (!project) {
       setError("Choose an active project first.");
       return;
     }
-    const result = run((d) => startTimer(d, { projectId: project.id, phase, workMode, description }, new Date().toISOString()));
+    const result = run((d) => startTimer(d, { projectId: project.id, phase, workMode, description, targetMinutes: target }, new Date().toISOString()));
     if (!result.ok) {
       setError(result.error);
       return;
     }
-    savePrefs({ projectId: project.id, phase, workMode });
+    savePrefs({ projectId: project.id, phase, workMode, targetMinutes: target });
     focus.open();
   }
 
@@ -120,7 +130,7 @@ function Composer({
 
       <fieldset>
         <legend className="mb-2.5 text-meta text-fg-3">Phase</legend>
-        <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(8.75rem,1fr))] gap-1.5">
           {PHASES.map((p) => {
             const selected = p === phase;
             return (
@@ -139,12 +149,32 @@ function Composer({
         </div>
         {row && (
           <p className="num mt-3 text-meta text-fg-3" aria-live="polite">
-            <span className="font-mono text-fg-2">{formatMinutes(row.actual)}</span> recorded of{" "}
-            <span className="font-mono text-fg-2">{formatMinutes(row.revised ?? row.original)}</span>{" "}
+            <span className="text-fg-2">{formatMinutes(row.actual)}</span> recorded of{" "}
+            <span className="text-fg-2">{formatMinutes(row.revised ?? row.original)}</span>{" "}
             {row.revised !== null ? "revised" : "planned"}
           </p>
         )}
       </fieldset>
+
+      <div>
+        <Label>How long will it take?</Label>
+        <ChipGroup
+          label="Expected length"
+          name="start-length"
+          value={target === null ? OPEN : String(target)}
+          onChange={(v) => setTarget(v === OPEN ? null : Number(v))}
+          options={[
+            { value: OPEN, label: "No limit" },
+            ...lengths.map((m) => ({
+              value: String(m),
+              label: m === leftInPlan ? `${formatMinutes(m)} · rest of plan` : formatMinutes(m),
+            })),
+          ]}
+        />
+        <p className="num mt-3 text-meta text-fg-3" aria-live="polite">
+          {target === null ? "Runs until you stop it." : <DoneBy minutes={target} />}
+        </p>
+      </div>
 
       <div>
         <Label>Work mode</Label>
@@ -189,6 +219,27 @@ function Composer({
   );
 }
 
+function Remaining({ timer, target, now }: { timer: ActiveTimer; target: number; now: number }) {
+  const left = target * 60 - workingSeconds(timer, now || Date.parse(timer.startedAt));
+  return (
+    <p className="num mt-2 text-meta text-fg-2">
+      {left >= 0
+        ? `${formatMinutes(Math.max(1, Math.ceil(left / 60)))} left of ${formatMinutes(target)}`
+        : `${formatMinutes(Math.max(1, Math.floor(-left / 60)))} over the ${formatMinutes(target)} planned`}
+    </p>
+  );
+}
+
+/** "Done around 5:45 PM", kept current without re-rendering the whole form each second. */
+function DoneBy({ minutes }: { minutes: number }) {
+  const now = useNow();
+  return (
+    <>
+      Starts now, done around <span className="text-fg-2">{formatTime(new Date(now + minutes * 60_000).toISOString())}</span>
+    </>
+  );
+}
+
 function SessionInProgress({ data }: { data: AppData }) {
   const focus = useFocus();
   const now = useNow();
@@ -197,12 +248,13 @@ function SessionInProgress({ data }: { data: AppData }) {
   return (
     <section aria-label="Session in progress" className="rounded-lg bg-surface px-6 py-7 sm:px-8">
       <p className="micro flex items-center gap-2.5 text-fg-2">
-        <RecordingDot className="size-1.5" />
-        In progress
+        {timer.pausedAt ? <Pause className="size-3" aria-hidden /> : <RecordingDot className="size-1.5" />}
+        {timer.pausedAt ? "Paused" : "In progress"}
       </p>
-      <p className="num mt-4 font-mono text-[44px] leading-none font-light tracking-[-0.04em] text-fg">
-        {formatClock(elapsedSeconds(timer.startedAt, now || Date.parse(timer.startedAt)))}
+      <p className="num mt-4 font-serif text-[52px] leading-none font-light tracking-[-0.02em] text-fg">
+        {formatClock(workingSeconds(timer, now || Date.parse(timer.startedAt)))}
       </p>
+      {timer.targetMinutes !== null && <Remaining timer={timer} target={timer.targetMinutes} now={now} />}
       <p className="mt-4 text-body text-fg">{timer.phase}</p>
       <p className="mt-0.5 text-meta break-words text-fg-3">{project?.name}</p>
       <Button variant="primary" size="lg" onClick={focus.open} className="mt-7 h-12 w-full rounded-full sm:w-auto">

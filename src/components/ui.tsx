@@ -184,6 +184,52 @@ export function Segmented<T extends string>({
   );
 }
 
+/** Wrapping row of pill choices (radio semantics). A `value` matching no option selects none. */
+export function ChipGroup<T extends string>({
+  label,
+  name,
+  value,
+  options,
+  onChange,
+  className,
+}: {
+  label: string;
+  name: string;
+  value: T | "";
+  options: ReadonlyArray<{ value: T; label: ReactNode }>;
+  onChange: (value: T) => void;
+  className?: string;
+}) {
+  return (
+    <div role="radiogroup" aria-label={label} className={cx("flex flex-wrap gap-1.5", className)}>
+      {options.map((option) => {
+        const selected = option.value === value;
+        return (
+          <label
+            key={option.value}
+            className={cx(
+              "num inline-flex h-10 cursor-pointer items-center gap-1.5 rounded-full border px-3.5 text-meta whitespace-nowrap transition-colors duration-150 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-fg sm:h-9",
+              selected
+                ? "border-inverse bg-inverse font-medium text-inverse-fg"
+                : "border-border text-fg-2 hover:border-border-strong hover:text-fg",
+            )}
+          >
+            <input
+              type="radio"
+              name={name}
+              value={option.value}
+              checked={selected}
+              onChange={() => onChange(option.value)}
+              className="sr-only"
+            />
+            {option.label}
+          </label>
+        );
+      })}
+    </div>
+  );
+}
+
 /** Text tabs with an underline for the selected option (radio semantics). */
 export function TabFilter<T extends string>({
   label,
@@ -219,7 +265,7 @@ export function TabFilter<T extends string>({
               className="sr-only"
             />
             {option.label}
-            {option.count !== undefined && <span className="num font-mono text-meta text-fg-3">{option.count}</span>}
+            {option.count !== undefined && <span className="num text-meta text-fg-3">{option.count}</span>}
           </label>
         );
       })}
@@ -294,7 +340,7 @@ export function PageHeader({ eyebrow, title, children }: { eyebrow?: ReactNode; 
     <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
       <div className="min-w-0">
         {eyebrow && <p className="micro mb-2">{eyebrow}</p>}
-        <h1 className="text-title font-semibold tracking-[-0.02em] break-words text-fg">{title}</h1>
+        <h1 className="font-serif text-title tracking-[-0.02em] break-words text-fg">{title}</h1>
       </div>
       {children}
     </header>

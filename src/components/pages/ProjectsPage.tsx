@@ -114,7 +114,7 @@ function ProjectRow({ project, data, lastActivity, now }: { project: Project; da
           </p>
           <p className="mt-1 text-meta text-fg-3">{activity}</p>
         </div>
-        <p className="num text-right font-mono text-body text-fg lg:order-none">
+        <p className="num text-right text-body text-fg lg:order-none">
           {formatMinutes(totals.actual)}
           <span className="text-fg-3"> / {formatMinutes(totals.original)}</span>
         </p>

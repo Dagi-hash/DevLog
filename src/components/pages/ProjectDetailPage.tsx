@@ -57,7 +57,7 @@ export function ProjectDetailPage() {
           <div className="mb-3 flex flex-wrap items-center gap-3">
             <StatusLabel status={project.status} />
           </div>
-          <h1 className="text-title font-semibold tracking-[-0.02em] break-words text-fg">{project.name}</h1>
+          <h1 className="font-serif text-title tracking-[-0.02em] break-words text-fg">{project.name}</h1>
           {project.description && <p className="mt-3 max-w-2xl text-body leading-relaxed break-words text-fg-2">{project.description}</p>}
         </div>
         <div className="flex flex-wrap gap-2 lg:col-span-5 lg:justify-end lg:self-end">
@@ -113,7 +113,7 @@ export function ProjectDetailPage() {
 
       {/* One figure, one line of context, one bar. Details live in the table below. */}
       <section aria-label="Totals" className="mt-12 lg:mt-16">
-        <p className="num font-mono text-figure font-light tracking-[-0.035em] text-fg">
+        <p className="num font-serif text-figure font-light tracking-[-0.02em] text-fg">
           {formatMinutes(totals.actual)}
           <span className="ml-3 align-middle font-sans text-body font-normal tracking-normal text-fg-3">
             of {formatMinutes(totals.original)} planned
@@ -126,20 +126,20 @@ export function ProjectDetailPage() {
           label={`${formatMinutes(totals.actual)} recorded of ${formatMinutes(totals.original)} originally planned`}
         />
         <p className="num mt-3 text-meta text-fg-3">
-          <span className="font-mono text-fg-2">
+          <span className="text-fg-2">
             {formatSignedMinutes(diff)}m · {formatPercentVariance(variancePercent(totals.actual, totals.original))}
           </span>{" "}
           against the original plan
           {totals.revised !== null && (
             <>
-              {" "}· forecast <span className="font-mono text-fg-2">{formatMinutes(totals.revised)}</span>
+              {" "}· forecast <span className="text-fg-2">{formatMinutes(totals.revised)}</span>
             </>
           )}
         </p>
       </section>
 
       <section className="mt-16 lg:mt-24" aria-labelledby="plan-heading">
-        <h2 id="plan-heading" className="mb-4 text-heading font-semibold tracking-[-0.01em]">
+        <h2 id="plan-heading" className="mb-4 font-serif text-heading tracking-[-0.01em]">
           Plan and actuals
         </h2>
         <ProjectSummary project={project} data={data} />
@@ -147,7 +147,7 @@ export function ProjectDetailPage() {
 
       <section className="mt-16 lg:mt-24" aria-labelledby="log-heading">
         <div className="mb-4 flex items-center justify-between gap-4">
-          <h2 id="log-heading" className="text-heading font-semibold tracking-[-0.01em]">
+          <h2 id="log-heading" className="font-serif text-heading tracking-[-0.01em]">
             Time log
           </h2>
           {project.status !== "archived" && (

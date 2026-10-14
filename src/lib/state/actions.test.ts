@@ -8,11 +8,16 @@ import {
   createProject,
   deleteEntry,
   discardTimer,
+  pauseTimer,
+  pausedInterruption,
+  resumeTimer,
   saveTimerEntry,
   setOriginalEstimate,
   setProjectStatus,
   setRevisedEstimate,
+  setTimerTarget,
   startTimer,
+  switchTimerPhase,
   updateEntry,
   updateProjectDetails,
 } from "./actions";
@@ -117,6 +122,28 @@ describe("timer", () => {
     expect(data.activeTimer).toBeNull();
   });
 
+  it("records the expected length on the timer and carries it to the saved entry", () => {
+    const started = startTimer(
+      withProject(),
+      { projectId: "p1", phase: "Code", workMode: "manual", description: "", targetMinutes: 45 },
+      NOW,
+      "s1",
+    );
+    expect(started.activeTimer).toMatchObject({ targetMinutes: 45, startedAt: NOW });
+    const extended = setTimerTarget(started, "s1", 60);
+    expect(extended.activeTimer?.targetMinutes).toBe(60);
+    // Ending at the expected time (not when Stop was pressed) is just an earlier endedAt.
+    const saved = saveTimerEntry(extended, { sessionId: "s1", endedAt: plus(NOW, 3600), interruption: "0", description: "" }, NOW, "e1");
+    expect(saved.entries[0]).toMatchObject({ targetMinutes: 60, netMinutes: 60 });
+  });
+
+  it("defaults to an open-ended session and rejects a zero-minute target", () => {
+    const started = startTimer(withProject(), { projectId: "p1", phase: "Code", workMode: "manual", description: "" }, NOW, "s1");
+    expect(started.activeTimer?.targetMinutes).toBeNull();
+    expect(() => setTimerTarget(started, "s1", 0)).toThrow(DomainError);
+    expect(() => setTimerTarget(started, "other", 30)).toThrow(/no longer running/);
+  });
+
   it("is idempotent: saving the same session twice does not duplicate", () => {
     const once = startAndSave(withProject(), 600);
     const twice = saveTimerEntry(once, { sessionId: "s1", endedAt: plus(NOW, 600), interruption: "0", description: "" }, NOW, "e-other");
@@ -181,3 +208,71 @@ describe("time entries", () => {
     expect(() => addManualEntry(data, draft, NOW)).toThrow(/Archived/);
   });
 });
+
+describe("pausing", () => {
+  const start = () =>
+    startTimer(withProject(), { projectId: "p1", phase: "Code", workMode: "manual", description: "" }, NOW, "s1");
+
+  it("accumulates paused time across pauses and turns it into interruptions", () => {
+    let data = pauseTimer(start(), "s1", plus(NOW, 600));
+    expect(data.activeTimer?.pausedAt).toBe(plus(NOW, 600));
+    expect(pauseTimer(data, "s1", plus(NOW, 700))).toBe(data); // already paused
+    data = resumeTimer(data, "s1", plus(NOW, 900)); // 5 min paused
+    data = pauseTimer(data, "s1", plus(NOW, 1200));
+    expect(data.activeTimer).toMatchObject({ pausedAt: plus(NOW, 1200), pausedSeconds: 300 });
+    // Stopped while still paused: the open pause counts too (5 + 3 min).
+    expect(pausedInterruption(data.activeTimer!, plus(NOW, 1380))).toBe(8);
+  });
+
+  it("never implies more interruption than the session's gross time", () => {
+    const paused = pauseTimer(start(), "s1", NOW);
+    expect(pausedInterruption(paused.activeTimer!, plus(NOW, 29))).toBe(0);
+    expect(pausedInterruption(paused.activeTimer!, plus(NOW, 600))).toBe(10);
+  });
+});
+
+describe("switching phase", () => {
+  it("saves the current session and starts the next phase from the same instant", () => {
+    let data = startTimer(
+      withProject(),
+      { projectId: "p1", phase: "Code", workMode: "ai_agent", description: "parser", targetMinutes: 45 },
+      NOW,
+      "s1",
+    );
+    data = resumeTimer(pauseTimer(data, "s1", plus(NOW, 600)), "s1", plus(NOW, 780)); // 3 min paused
+    const at = plus(NOW, 40 * 60);
+    const switched = switchTimerPhase(data, { sessionId: "s1", phase: "Compile", at }, at, "e1", "s2");
+
+    expect(switched.entries).toHaveLength(1);
+    expect(switched.entries[0]).toMatchObject({
+      sessionId: "s1",
+      phase: "Code",
+      workMode: "ai_agent",
+      endedAt: at,
+      interruptionMinutes: 3,
+      netMinutes: 37,
+      description: "parser",
+      targetMinutes: 45,
+    });
+    expect(switched.activeTimer).toMatchObject({
+      sessionId: "s2",
+      projectId: "p1",
+      phase: "Compile",
+      workMode: "ai_agent",
+      startedAt: at,
+      description: "",
+      targetMinutes: null,
+      pausedAt: null,
+      pausedSeconds: 0,
+    });
+    expect(switched.projects[0]!.baselineLockedAt).toBe(at);
+  });
+
+  it("relabels a session too short to record instead of saving it", () => {
+    const data = startTimer(withProject(), { projectId: "p1", phase: "Code", workMode: "manual", description: "" }, NOW, "s1");
+    const switched = switchTimerPhase(data, { sessionId: "s1", phase: "Test", at: plus(NOW, 20) }, NOW);
+    expect(switched.entries).toHaveLength(0);
+    expect(switched.activeTimer).toMatchObject({ sessionId: "s1", phase: "Test", startedAt: NOW });
+  });
+});
+

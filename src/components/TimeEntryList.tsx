@@ -37,7 +37,7 @@ export function TimeEntryList({
         <section key={group.key} aria-label={formatDayHeading(group.key, now)}>
           <div className="flex items-baseline justify-between border-b border-hairline pb-2">
             <h3 className="text-body font-medium text-fg">{formatDayHeading(group.key, now)}</h3>
-            <span className="num font-mono text-meta text-fg-2">{formatMinutes(sumNetMinutes(group.entries))}</span>
+            <span className="num text-meta text-fg-2">{formatMinutes(sumNetMinutes(group.entries))}</span>
           </div>
           <ul>
             {group.entries.map((entry) => (
@@ -82,7 +82,7 @@ function EntryRow({
         aria-label={label}
         className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto_16px] items-start gap-x-4 gap-y-1 py-3.5 text-left transition-colors hover:bg-hover lg:grid-cols-[120px_minmax(0,1fr)_88px] lg:items-center lg:px-2"
       >
-        <span className="num order-3 col-span-3 font-mono text-meta text-fg-3 lg:order-none lg:col-span-1">
+        <span className="num order-3 col-span-3 text-meta text-fg-3 lg:order-none lg:col-span-1">
           {formatTime(entry.startedAt)}–{formatTime(entry.endedAt)}
           {crossesDay && " +1d"}
         </span>
@@ -95,7 +95,7 @@ function EntryRow({
           {showProject && project && <span className="mt-0.5 block truncate text-meta text-fg-2">{project.name}</span>}
           {entry.description && <span className="mt-0.5 block text-meta break-words text-fg-3">{entry.description}</span>}
         </span>
-        <span className="num text-right font-mono text-body text-fg">
+        <span className="num text-right text-body text-fg">
           {formatMinutes(entry.netMinutes)}
           {entry.interruptionMinutes > 0 && (
             <span className="block text-tiny text-fg-3">−{entry.interruptionMinutes}m int.</span>

@@ -143,6 +143,11 @@ function isWholeMinutes(v: unknown): v is number {
   return typeof v === 'number' && Number.isSafeInteger(v) && v >= 0;
 }
 
+/** Expected session length; absent in data saved before it existed. */
+function asTarget(v: unknown): number | null {
+  return isWholeMinutes(v) && v > 0 ? v : null;
+}
+
 function asArray(v: unknown): unknown[] {
   return Array.isArray(v) ? v : [];
 }
@@ -221,6 +226,7 @@ export function sanitize(input: Record<string, unknown>): { data: AppData; dropp
         // Never trust a stored total: derive it from the timestamps.
         netMinutes: grossMinutesBetween(e.startedAt, e.endedAt) - e.interruptionMinutes,
         description: isString(e.description) ? e.description : '',
+        targetMinutes: asTarget(e.targetMinutes),
         createdAt: e.createdAt,
         updatedAt: e.updatedAt,
       });
@@ -246,7 +252,10 @@ export function sanitize(input: Record<string, unknown>): { data: AppData; dropp
         phase: t.phase,
         workMode: t.workMode,
         description: isString(t.description) ? t.description : '',
+        targetMinutes: asTarget(t.targetMinutes),
         startedAt: t.startedAt,
+        pausedAt: isIso(t.pausedAt) && Date.parse(t.pausedAt) >= Date.parse(t.startedAt) ? t.pausedAt : null,
+        pausedSeconds: isWholeMinutes(t.pausedSeconds) ? t.pausedSeconds : 0,
       };
     } else if (!(isRecord(t) && isString(t.sessionId) && entries.some((e) => e.sessionId === t.sessionId))) {
       // A timer whose entry was already saved is simply finished, not invalid.
