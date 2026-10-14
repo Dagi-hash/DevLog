@@ -1,7 +1,6 @@
 "use client";
 
-import { Pencil, Trash2 } from "lucide-react";
-import Link from "next/link";
+import { ChevronRight, Pencil, Trash2 } from "lucide-react";
 import { sumNetMinutes } from "@/lib/domain/calculations";
 import { formatDayHeading, formatMinutes, formatTime, localDayKey } from "@/lib/domain/format";
 import type { Project, TimeEntry } from "@/lib/domain/types";
@@ -33,14 +32,14 @@ export function TimeEntryList({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-10">
       {groups.map((group) => (
         <section key={group.key} aria-label={formatDayHeading(group.key, now)}>
-          <div className="mb-1.5 flex items-baseline justify-between px-1">
-            <h3 className="text-[13px] font-semibold text-fg-2">{formatDayHeading(group.key, now)}</h3>
-            <span className="num text-[12.5px] text-fg-3">{formatMinutes(sumNetMinutes(group.entries))}</span>
+          <div className="flex items-baseline justify-between border-b border-hairline pb-2">
+            <h3 className="text-body font-medium text-fg">{formatDayHeading(group.key, now)}</h3>
+            <span className="num font-mono text-meta text-fg-2">{formatMinutes(sumNetMinutes(group.entries))}</span>
           </div>
-          <ul className="divide-y divide-line overflow-hidden rounded-lg border border-line bg-surface">
+          <ul>
             {group.entries.map((entry) => (
               <EntryRow
                 key={entry.id}
@@ -72,39 +71,43 @@ function EntryRow({
   onDelete: (entry: TimeEntry) => void;
 }) {
   const crossesDay = localDayKey(entry.startedAt) !== localDayKey(entry.endedAt);
+  const label = `Edit ${entry.phase} entry, ${formatMinutes(entry.netMinutes)}, ${formatTime(entry.startedAt)} to ${formatTime(entry.endedAt)}`;
+
   return (
-    <li className="group grid grid-cols-[1fr_auto] gap-x-4 gap-y-1 px-4 py-3 sm:grid-cols-[112px_1fr_auto_auto] sm:items-center">
-      <p className="num order-2 col-span-2 font-mono text-[12.5px] text-fg-3 sm:order-none sm:col-span-1">
-        {formatTime(entry.startedAt)}–{formatTime(entry.endedAt)}
-        {crossesDay && <span title="Ends on the next day"> +1d</span>}
-        {entry.interruptionMinutes > 0 && (
-          <span className="ml-2 font-sans text-[12px] sm:ml-0 sm:block">−{entry.interruptionMinutes}m interrupted</span>
-        )}
-      </p>
-      <div className="order-1 min-w-0 sm:order-none">
-        <p className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[14px]">
-          <span className="font-medium text-fg">{entry.phase}</span>
-          <ModeTag mode={entry.workMode} />
-          {entry.sessionId === null && <span className="text-[11.5px] text-fg-3">manual entry</span>}
-        </p>
-        {showProject && project && (
-          <Link
-            href={`/projects/${project.id}`}
-            className="mt-0.5 block truncate text-[13px] text-fg-2 hover:text-fg"
-          >
-            {project.name}
-          </Link>
-        )}
-        {entry.description && <p className="mt-0.5 text-[13px] break-words text-fg-3">{entry.description}</p>}
-      </div>
-      <p className="num order-1 self-start text-right text-[15px] font-semibold text-fg sm:order-none sm:self-center">
-        {formatMinutes(entry.netMinutes)}
-      </p>
-      <div className="order-3 col-span-2 -mb-1 flex justify-end gap-1 sm:order-none sm:col-span-1 sm:mb-0">
+    <li className="flex items-stretch border-b border-hairline">
+      {/* The whole row opens the editor (the touch interaction); desktop adds explicit buttons. */}
+      <button
+        type="button"
+        onClick={() => onEdit(entry)}
+        aria-label={label}
+        className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto_16px] items-start gap-x-4 gap-y-1 py-3.5 text-left transition-colors hover:bg-hover lg:grid-cols-[120px_minmax(0,1fr)_88px] lg:items-center lg:px-2"
+      >
+        <span className="num order-3 col-span-3 font-mono text-meta text-fg-3 lg:order-none lg:col-span-1">
+          {formatTime(entry.startedAt)}–{formatTime(entry.endedAt)}
+          {crossesDay && " +1d"}
+        </span>
+        <span className="min-w-0">
+          <span className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
+            <span className="text-body font-medium text-fg">{entry.phase}</span>
+            <ModeTag mode={entry.workMode} />
+            {entry.sessionId === null && <span className="text-meta text-fg-3">added manually</span>}
+          </span>
+          {showProject && project && <span className="mt-0.5 block truncate text-meta text-fg-2">{project.name}</span>}
+          {entry.description && <span className="mt-0.5 block text-meta break-words text-fg-3">{entry.description}</span>}
+        </span>
+        <span className="num text-right font-mono text-body text-fg">
+          {formatMinutes(entry.netMinutes)}
+          {entry.interruptionMinutes > 0 && (
+            <span className="block text-tiny text-fg-3">−{entry.interruptionMinutes}m int.</span>
+          )}
+        </span>
+        <ChevronRight className="mt-0.5 size-4 text-fg-4 lg:hidden" aria-hidden />
+      </button>
+      <div className="hidden items-center gap-1 pl-4 lg:flex">
         <button
           type="button"
           onClick={() => onEdit(entry)}
-          className="inline-flex h-8 items-center gap-1.5 rounded-sm px-2 text-[12.5px] text-fg-2 transition-colors hover:bg-white/5 hover:text-fg"
+          className="inline-flex h-9 items-center gap-1.5 rounded-sm px-2.5 text-meta text-fg-2 transition-colors hover:bg-hover hover:text-fg"
         >
           <Pencil className="size-3.5" aria-hidden />
           Edit
@@ -112,7 +115,7 @@ function EntryRow({
         <button
           type="button"
           onClick={() => onDelete(entry)}
-          className="inline-flex h-8 items-center gap-1.5 rounded-sm px-2 text-[12.5px] text-fg-2 transition-colors hover:bg-danger-soft hover:text-danger"
+          className="inline-flex h-9 items-center gap-1.5 rounded-sm px-2.5 text-meta text-fg-2 transition-colors hover:bg-hover hover:text-fg"
         >
           <Trash2 className="size-3.5" aria-hidden />
           Delete

@@ -1,6 +1,6 @@
 "use client";
 
-import { Archive, ArchiveRestore, ArrowLeft, CircleCheck, Pencil, Plus, RotateCcw, ScrollText } from "lucide-react";
+import { Archive, ArchiveRestore, ArrowLeft, Check, Pencil, Plus, RotateCcw } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
@@ -14,7 +14,7 @@ import { EmptyState } from "../EmptyState";
 import { ProjectForm } from "../ProjectForm";
 import { ProjectSummary } from "../ProjectSummary";
 import { TimeEntryList } from "../TimeEntryList";
-import { Button, InlineAlert, SectionHeading, StatusPill, cx } from "../ui";
+import { Button, InlineAlert, ProgressBar, StatusLabel } from "../ui";
 import { useEntryDialogs } from "../useEntryDialogs";
 
 export function ProjectDetailPage() {
@@ -28,24 +28,19 @@ export function ProjectDetailPage() {
 
   if (!project) {
     return (
-      <div className="rounded-lg border border-line bg-surface">
-        <EmptyState
-          title="Project not found"
-          action={
-            <Link href="/projects" className="text-[14px] font-medium text-accent hover:text-accent-strong">
-              Back to projects
-            </Link>
-          }
-        >
-          It may have been created in another browser. Data here is stored only on this device.
-        </EmptyState>
+      <div className="max-w-xl">
+        <BackLink />
+        <div className="mt-8">
+          <EmptyState title="Project not found">
+            It may have been created in another browser. Data here is stored only on this device.
+          </EmptyState>
+        </div>
       </div>
     );
   }
 
-  const summary = buildProjectSummary(project.id, data.estimates, data.entries);
+  const { totals } = buildProjectSummary(project.id, data.estimates, data.entries);
   const entries = data.entries.filter((e) => e.projectId === project.id);
-  const { totals } = summary;
   const diff = totals.actual - totals.original;
 
   function changeStatus(status: ProjectStatus) {
@@ -55,37 +50,30 @@ export function ProjectDetailPage() {
 
   return (
     <>
-      <Link href="/projects" className="inline-flex items-center gap-1.5 text-[13px] text-fg-2 transition-colors hover:text-fg">
-        <ArrowLeft className="size-3.5" aria-hidden />
-        Projects
-      </Link>
+      <BackLink />
 
-      <header className="mt-4 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-            <h1 className="min-w-0 text-[24px] leading-tight font-semibold tracking-tight break-words text-fg sm:text-[28px]">
-              {project.name}
-            </h1>
-            <StatusPill status={project.status} />
+      <header className="mt-6 grid gap-6 lg:grid-cols-12 lg:gap-x-16">
+        <div className="min-w-0 lg:col-span-7">
+          <div className="mb-3 flex flex-wrap items-center gap-3">
+            <StatusLabel status={project.status} />
+            <span className="num font-mono text-meta text-fg-3">Created {formatDate(project.createdAt, { year: "numeric" })}</span>
           </div>
-          {project.description && (
-            <p className="mt-2 max-w-2xl text-[14px] leading-relaxed break-words text-fg-2">{project.description}</p>
-          )}
-          <p className="mt-2 text-[12.5px] text-fg-3">Created {formatDate(project.createdAt, { year: "numeric" })}</p>
+          <h1 className="text-title font-semibold tracking-[-0.02em] break-words text-fg">{project.name}</h1>
+          {project.description && <p className="mt-3 max-w-2xl text-body leading-relaxed break-words text-fg-2">{project.description}</p>}
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 lg:col-span-5 lg:justify-end lg:self-end">
           <Button size="sm" onClick={() => setEditing(true)}>
-            <Pencil />
+            <Pencil aria-hidden />
             Edit
           </Button>
           {project.status === "active" && (
             <>
               <Button size="sm" onClick={() => changeStatus("completed")}>
-                <CircleCheck />
+                <Check aria-hidden />
                 Mark completed
               </Button>
               <Button size="sm" variant="ghost" onClick={() => changeStatus("archived")}>
-                <Archive />
+                <Archive aria-hidden />
                 Archive
               </Button>
             </>
@@ -93,18 +81,18 @@ export function ProjectDetailPage() {
           {project.status === "completed" && (
             <>
               <Button size="sm" onClick={() => changeStatus("active")}>
-                <RotateCcw />
+                <RotateCcw aria-hidden />
                 Reopen
               </Button>
               <Button size="sm" variant="ghost" onClick={() => changeStatus("archived")}>
-                <Archive />
+                <Archive aria-hidden />
                 Archive
               </Button>
             </>
           )}
           {project.status === "archived" && (
             <Button size="sm" onClick={() => changeStatus("active")}>
-              <ArchiveRestore />
+              <ArchiveRestore aria-hidden />
               Restore
             </Button>
           )}
@@ -112,69 +100,73 @@ export function ProjectDetailPage() {
       </header>
 
       {statusError && (
-        <div className="mt-4">
+        <div className="mt-5">
           <InlineAlert>{statusError}</InlineAlert>
         </div>
       )}
       {project.status !== "active" && (
-        <p className="mt-4 rounded-md border border-line bg-surface px-4 py-2.5 text-[13px] text-fg-2">
+        <p className="mt-5 border-l-2 border-fg-3 py-1 pl-3 text-meta text-fg-2">
           {project.status === "completed"
             ? "Completed projects can’t be timed. Records stay editable for postmortem fixes."
             : "Archived projects are read-only for planning and hidden from the timer. Existing records are preserved."}
         </p>
       )}
 
-      <dl className="mt-8 grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-line bg-line sm:grid-cols-4">
-        <Figure label="Original plan" value={formatMinutes(totals.original)} />
-        <Figure
-          label="Revised forecast"
-          value={totals.revised === null ? "—" : formatMinutes(totals.revised)}
-          note={totals.revised === null ? "Not revised" : undefined}
+      {/* One dominant figure, supporting figures set as a line of type — not cards. */}
+      <section aria-label="Totals" className="mt-10 border-t border-hairline pt-6 lg:mt-14">
+        <div className="grid gap-6 lg:grid-cols-12 lg:items-end lg:gap-x-16">
+          <div className="lg:col-span-5">
+            <p className="micro">Actual to date</p>
+            <p className="num mt-2 font-mono text-figure font-light tracking-[-0.03em] text-fg">{formatMinutes(totals.actual)}</p>
+            <p className="mt-2 text-meta text-fg-3">
+              {entries.length} entr{entries.length === 1 ? "y" : "ies"}
+            </p>
+          </div>
+          <dl className="grid grid-cols-3 gap-4 lg:col-span-7">
+            <Figure label="Original plan" value={formatMinutes(totals.original)} />
+            <Figure label="Revised forecast" value={totals.revised === null ? "—" : formatMinutes(totals.revised)} />
+            <Figure
+              label="Δ original"
+              value={`${formatSignedMinutes(diff)}m`}
+              note={formatPercentVariance(variancePercent(totals.actual, totals.original))}
+            />
+          </dl>
+        </div>
+        <ProgressBar
+          className="mt-6"
+          actual={totals.actual}
+          planned={totals.original}
+          label={`${formatMinutes(totals.actual)} recorded of ${formatMinutes(totals.original)} originally planned`}
         />
-        <Figure label="Actual" value={formatMinutes(totals.actual)} strong note={`${entries.length} entr${entries.length === 1 ? "y" : "ies"}`} />
-        <Figure
-          label="Variance vs original"
-          value={`${formatSignedMinutes(diff)} min`}
-          note={formatPercentVariance(variancePercent(totals.actual, totals.original))}
-          tone={diff > 0 ? "over" : diff < 0 ? "under" : undefined}
-        />
-      </dl>
+      </section>
 
-      <section className="mt-10" aria-labelledby="plan-heading">
-        <SectionHeading id="plan-heading" title="Plan and actuals" />
+      <section className="mt-14 lg:mt-20" aria-labelledby="plan-heading">
+        <h2 id="plan-heading" className="mb-4 text-heading font-semibold tracking-[-0.01em]">
+          Plan and actuals
+        </h2>
         <ProjectSummary project={project} data={data} />
       </section>
 
-      <section className="mt-10" aria-labelledby="log-heading">
-        <SectionHeading
-          id="log-heading"
-          title="Time log"
-          aside={
-            project.status !== "archived" && (
-              <Button size="sm" onClick={openAdd}>
-                <Plus />
-                Add entry
-              </Button>
-            )
-          }
-        />
+      <section className="mt-14 lg:mt-20" aria-labelledby="log-heading">
+        <div className="mb-4 flex items-center justify-between gap-4">
+          <h2 id="log-heading" className="text-heading font-semibold tracking-[-0.01em]">
+            Time log
+          </h2>
+          {project.status !== "archived" && (
+            <Button size="sm" onClick={openAdd}>
+              <Plus aria-hidden />
+              Add entry
+            </Button>
+          )}
+        </div>
         {entries.length === 0 ? (
-          <div className="rounded-lg border border-line bg-surface">
-            <EmptyState icon={<ScrollText />} title="No time recorded yet">
-              {project.status === "active"
-                ? "Start a timer from Today, or add a past entry. The first saved entry locks the original estimates."
-                : "This project has no recorded time."}
-            </EmptyState>
-          </div>
+          <EmptyState title="No time recorded yet">
+            {project.status === "active"
+              ? "Start a timer from Today, or add a past entry. The first saved entry locks the original estimates."
+              : "This project has no recorded time."}
+          </EmptyState>
         ) : (
-          <TimeEntryList
-            entries={entries}
-            projects={data.projects}
-            now={now}
-            showProject={false}
-            onEdit={openEdit}
-            onDelete={requestDelete}
-          />
+          <TimeEntryList entries={entries} projects={data.projects} now={now} showProject={false} onEdit={openEdit} onDelete={requestDelete} />
         )}
       </section>
 
@@ -184,33 +176,22 @@ export function ProjectDetailPage() {
   );
 }
 
-function Figure({
-  label,
-  value,
-  note,
-  strong,
-  tone,
-}: {
-  label: string;
-  value: string;
-  note?: string;
-  strong?: boolean;
-  tone?: "over" | "under";
-}) {
+function BackLink() {
   return (
-    <div className="bg-surface px-4 py-3.5 sm:px-5">
-      <dt className="text-[12px] text-fg-3">{label}</dt>
-      <dd
-        className={cx(
-          "num mt-1 text-[19px] tracking-tight",
-          strong ? "font-semibold text-fg" : "font-medium text-fg",
-          tone === "over" && "text-over",
-          tone === "under" && "text-under",
-        )}
-      >
-        {value}
-      </dd>
-      {note && <dd className="num mt-0.5 text-[12px] text-fg-3">{note}</dd>}
+    <Link href="/projects" className="-ml-1 inline-flex h-9 items-center gap-1.5 px-1 text-meta text-fg-2 transition-colors hover:text-fg">
+      <ArrowLeft className="size-3.5" aria-hidden />
+      Projects
+    </Link>
+  );
+}
+
+function Figure({ label, value, note }: { label: string; value: string; note?: string }) {
+  return (
+    <div className="min-w-0 border-l border-hairline pl-4">
+      <dt className="text-meta text-fg-3">{label}</dt>
+      <dd className="num mt-1.5 truncate font-mono text-lead text-fg">{value}</dd>
+      {note && <dd className="num font-mono text-meta text-fg-3">{note}</dd>}
     </div>
   );
 }
+

@@ -25,7 +25,27 @@ AI-assisted and agentic engineering. It answers four questions for one developer
   Manual / AI-Assisted / AI-Agent breakdown. A table on desktop, compact cards on phones.
 - **Time log**: chronological entries grouped by day, filterable by project and work mode,
   with manual add, edit and delete (with confirmation).
-- **Settings**: data notes, reference definitions and a confirmed **Reset demo data**.
+- **Settings** (sidebar on desktop, top-bar icon on mobile): data notes, reference definitions
+  and a confirmed **Reset demo data**.
+
+## Design system
+
+- **Monochrome only.** Tokens live in `src/app/globals.css` (`@theme`): canvas `#0A0A0A`,
+  surfaces `#171717` / `#262626`, border `#343434`, text `#FAFAFA` / `#A3A3A3` / `#737373`,
+  plus an inverse pair for primary actions. Type sizes (`micro`, `meta`, `body`, `lead`,
+  `heading`, `title`, `figure`, `timer`), radii and motion are tokens too.
+- **No colour coding.** Work modes use shape (Manual ○, AI-Assisted ◐, AI-Agent ●, drawn as SVG).
+  Over-plan time is a hatched bar segment. Variance relies on its sign. Selected states
+  invert or underline.
+- **Type:** Geist Sans for text, and Geist Mono with tabular figures for every time, duration
+  and timestamp.
+- **Desktop:** a 76px labelled navigation rail and an asymmetric 12-column workspace. On
+  Today, the running clock is the anchor. Project data uses hairline-ruled numeric columns
+  instead of cards.
+- **Mobile:** its own layout. There's a top bar with the session indicator and Settings, a
+  three-tab bottom bar, grouped phase rows instead of tables, bottom-sheet dialogs,
+  44–56px touch targets and safe-area padding.
+- Icons come from `lucide-react` only.
 
 ## Rules the app enforces
 

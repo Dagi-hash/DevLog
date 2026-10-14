@@ -1,9 +1,9 @@
 "use client";
 
-import { ArrowRight, FolderClosed, Plus } from "lucide-react";
+import { ArrowRight, Plus } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { buildProjectSummary, sumNetMinutes, variancePercent } from "@/lib/domain/calculations";
 import {
   formatLongDate,
@@ -20,7 +20,7 @@ import { useAppData } from "@/lib/state/store";
 import { EmptyState } from "../EmptyState";
 import { ProjectForm } from "../ProjectForm";
 import { TimerPanel } from "../TimerPanel";
-import { Button, ModeDot, ProgressBar, SectionHeading, StatusPill, cx } from "../ui";
+import { Button, ModeGlyph, ProgressBar, SectionLabel, StatusLabel } from "../ui";
 import { useEntryDialogs } from "../useEntryDialogs";
 
 export function TodayPage() {
@@ -34,32 +34,27 @@ export function TodayPage() {
   const activeProjects = data.projects.filter((p) => p.status === "active");
   const selected = activeProjects.find((p) => p.id === selectedId) ?? mostRecentlyUsed(data, activeProjects) ?? null;
   const focusProject = data.activeTimer
-    ? data.projects.find((p) => p.id === data.activeTimer!.projectId) ?? null
+    ? (data.projects.find((p) => p.id === data.activeTimer!.projectId) ?? null)
     : selected;
 
   if (data.projects.length === 0) {
     return (
       <>
-        <PageDate now={now} />
-        <div className="mt-8 rounded-lg border border-line bg-surface">
+        <DateHeading now={now} />
+        <div className="mt-10 max-w-xl">
           <EmptyState
-            icon={<FolderClosed />}
             title="Start with a project"
             action={
-              <Button variant="primary" onClick={() => setCreating(true)}>
-                <Plus />
+              <Button variant="primary" size="lg" onClick={() => setCreating(true)}>
+                <Plus aria-hidden />
                 Create your first project
               </Button>
             }
           >
-            A project holds your phase estimates and every minute you record against them. Plan it, then start the timer.
+            A project holds your phase estimates and every minute you record against them.
           </EmptyState>
         </div>
-        <ProjectForm
-          open={creating}
-          onClose={() => setCreating(false)}
-          onCreated={(id) => router.push(`/projects/${id}`)}
-        />
+        <ProjectForm open={creating} onClose={() => setCreating(false)} onCreated={(id) => router.push(`/projects/${id}`)} />
       </>
     );
   }
@@ -67,74 +62,79 @@ export function TodayPage() {
   const todays = data.entries
     .filter((e) => isSameLocalDay(e.startedAt, now))
     .sort((a, b) => b.startedAt.localeCompare(a.startedAt));
+  const todayTotal = sumNetMinutes(todays);
 
   return (
     <>
-      <PageDate now={now} />
-      <div className="mt-6 grid gap-8 lg:mt-8 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-10">
-        <div className="min-w-0">
+      <div className="grid gap-x-16 lg:grid-cols-12">
+        <div className="lg:col-span-7">
+          <DateHeading now={now} />
+        </div>
+        <div className="mt-5 flex items-baseline gap-3 lg:col-span-4 lg:col-start-9 lg:mt-0 lg:block">
+          <p className="micro lg:mb-2">Recorded today</p>
+          <p className="num font-mono text-[22px] leading-none text-fg lg:text-figure lg:font-light lg:tracking-[-0.03em]">
+            {formatMinutes(todayTotal)}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-8 grid gap-x-16 gap-y-12 lg:mt-12 lg:grid-cols-12">
+        <div className="min-w-0 lg:col-span-7">
           <TimerPanel data={data} projectId={selected?.id ?? null} onProjectChange={setSelectedId} />
         </div>
 
-        <div className="min-w-0 space-y-8">
-          <section aria-labelledby="today-heading">
-            <SectionHeading
-              id="today-heading"
-              title="Recorded today"
-              aside={<span className="num text-[13px] font-medium text-fg">{formatMinutes(sumNetMinutes(todays))}</span>}
-            />
+        <aside className="min-w-0 space-y-12 lg:col-span-4 lg:col-start-9" aria-label="Today and project overview">
+          <section aria-labelledby="ledger-heading">
+            <SectionLabel id="ledger-heading" aside={<span className="num font-mono text-meta text-fg-3">{todays.length}</span>}>
+              Today’s entries
+            </SectionLabel>
             {todays.length === 0 ? (
-              <p className="rounded-lg border border-dashed border-line px-4 py-6 text-center text-[13.5px] text-fg-3">
-                Nothing recorded yet today.
-              </p>
+              <p className="py-5 text-body text-fg-3">Nothing recorded yet today.</p>
             ) : (
-              <ul className="divide-y divide-line overflow-hidden rounded-lg border border-line bg-surface">
+              <ul>
                 {todays.map((entry) => {
                   const project = data.projects.find((p) => p.id === entry.projectId);
                   return (
-                    <li key={entry.id}>
+                    <li key={entry.id} className="border-b border-hairline">
                       <button
                         type="button"
                         onClick={() => openEdit(entry)}
-                        className="grid w-full grid-cols-[1fr_auto] gap-x-3 px-4 py-2.5 text-left transition-colors hover:bg-white/[0.02]"
+                        className="grid min-h-14 w-full grid-cols-[64px_minmax(0,1fr)_auto] items-baseline gap-x-3 py-3 text-left transition-colors hover:bg-hover"
                         aria-label={`Edit ${entry.phase} entry, ${formatMinutes(entry.netMinutes)}`}
                       >
-                        <span className="flex min-w-0 items-center gap-2 text-[13.5px]">
-                          <ModeDot mode={entry.workMode} />
-                          <span className="font-medium whitespace-nowrap text-fg">{entry.phase}</span>
-                          <span className="min-w-0 truncate text-fg-3">{project?.name}</span>
+                        <span className="num font-mono text-meta whitespace-nowrap text-fg-3">{formatTime(entry.startedAt)}</span>
+                        <span className="min-w-0">
+                          <span className="flex items-center gap-2 text-body text-fg">
+                            <ModeGlyph mode={entry.workMode} className="text-fg-2" />
+                            <span className="whitespace-nowrap">{entry.phase}</span>
+                          </span>
+                          <span className="block truncate text-meta text-fg-3">{project?.name}</span>
                         </span>
-                        <span className="num text-[13.5px] font-semibold text-fg">{formatMinutes(entry.netMinutes)}</span>
-                        <span className="num pl-3.5 font-mono text-[11.5px] text-fg-3">
-                          {formatTime(entry.startedAt)}–{formatTime(entry.endedAt)}
-                        </span>
+                        <span className="num font-mono text-body text-fg">{formatMinutes(entry.netMinutes)}</span>
                       </button>
                     </li>
                   );
                 })}
               </ul>
             )}
-            <Link
-              href="/log"
-              className="mt-2.5 inline-flex items-center gap-1.5 px-1 text-[13px] text-fg-2 transition-colors hover:text-fg"
-            >
+            <Link href="/log" className="mt-1 inline-flex h-11 items-center gap-1.5 text-meta text-fg-2 transition-colors hover:text-fg">
               Full time log <ArrowRight className="size-3.5" aria-hidden />
             </Link>
           </section>
 
-          {focusProject && <ProjectGlance project={focusProject} data={data} />}
-        </div>
+          {focusProject && <ProjectGlance project={focusProject} data={data} running={!!data.activeTimer} />}
+        </aside>
       </div>
       {dialogs}
     </>
   );
 }
 
-function PageDate({ now }: { now: Date }) {
+function DateHeading({ now }: { now: Date }) {
   return (
     <header>
-      <p className="text-[12.5px] font-medium tracking-wide text-fg-3 uppercase">Today</p>
-      <h1 className="mt-1 text-[24px] font-semibold tracking-tight text-fg sm:text-[28px]" suppressHydrationWarning>
+      <p className="micro mb-2">Today</p>
+      <h1 className="text-title font-semibold tracking-[-0.02em] text-fg" suppressHydrationWarning>
         {formatLongDate(now)}
       </h1>
     </header>
@@ -149,54 +149,41 @@ function mostRecentlyUsed(data: AppData, candidates: Project[]): Project | undef
   return candidates.find((p) => p.id === latest?.projectId) ?? candidates[0];
 }
 
-function ProjectGlance({ project, data }: { project: Project; data: AppData }) {
+function ProjectGlance({ project, data, running }: { project: Project; data: AppData; running: boolean }) {
   const { totals } = buildProjectSummary(project.id, data.estimates, data.entries);
   const diff = totals.actual - totals.original;
   const pct = variancePercent(totals.actual, totals.original);
-  const progress = totals.original > 0 ? Math.round((totals.actual / totals.original) * 100) : null;
 
   return (
     <section aria-labelledby="glance-heading">
-      <SectionHeading id="glance-heading" title={data.activeTimer ? "Current project" : "Selected project"} />
-      <div className="rounded-lg border border-line bg-surface px-4 py-4">
-        <div className="flex items-start justify-between gap-3">
-          <Link
-            href={`/projects/${project.id}`}
-            className="min-w-0 text-[15px] leading-snug font-semibold break-words text-fg hover:underline hover:decoration-fg-3 hover:underline-offset-4"
-          >
-            {project.name}
-          </Link>
-          <StatusPill status={project.status} />
-        </div>
-
-        <dl className="mt-4 grid grid-cols-3 gap-3">
-          <Stat label="Actual" value={formatMinutes(totals.actual)} strong />
-          <Stat label="Planned" value={formatMinutes(totals.original)} />
-          <Stat label="Forecast" value={totals.revised === null ? "—" : formatMinutes(totals.revised)} />
-        </dl>
-
-        <ProgressBar
-          className="mt-4"
-          actual={totals.actual}
-          planned={totals.original}
-          label={`${formatMinutes(totals.actual)} recorded of ${formatMinutes(totals.original)} planned`}
-        />
-        <p className="num mt-2 flex justify-between gap-3 text-[12.5px] text-fg-3">
-          <span>{progress === null ? "No original plan yet" : `${progress}% of original plan used`}</span>
-          <span className={cx(diff > 0 ? "text-over" : "text-fg-2")}>
-            {formatSignedMinutes(diff)} min · {formatPercentVariance(pct)}
-          </span>
-        </p>
+      <SectionLabel id="glance-heading">{running ? "Current project" : "Selected project"}</SectionLabel>
+      <div className="flex items-start justify-between gap-3 pt-4">
+        <Link href={`/projects/${project.id}`} className="min-w-0 text-lead leading-snug font-medium break-words underline-offset-4 hover:underline">
+          {project.name}
+        </Link>
+        <StatusLabel status={project.status} />
       </div>
+      <ProgressBar
+        className="mt-5"
+        actual={totals.actual}
+        planned={totals.original}
+        label={`${formatMinutes(totals.actual)} recorded of ${formatMinutes(totals.original)} planned`}
+      />
+      <dl className="mt-4">
+        <Row label="Actual" value={formatMinutes(totals.actual)} strong />
+        <Row label="Original plan" value={formatMinutes(totals.original)} />
+        <Row label="Revised forecast" value={totals.revised === null ? "—" : formatMinutes(totals.revised)} />
+        <Row label="Δ original" value={`${formatSignedMinutes(diff)}m · ${formatPercentVariance(pct)}`} />
+      </dl>
     </section>
   );
 }
 
-function Stat({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
+function Row({ label, value, strong }: { label: string; value: ReactNode; strong?: boolean }) {
   return (
-    <div className="min-w-0">
-      <dt className="text-[11.5px] text-fg-3">{label}</dt>
-      <dd className={cx("num mt-0.5 truncate text-[15px]", strong ? "font-semibold text-fg" : "text-fg-2")}>{value}</dd>
+    <div className="flex items-baseline justify-between gap-4 border-b border-hairline py-2.5">
+      <dt className="text-meta text-fg-2">{label}</dt>
+      <dd className={strong ? "num font-mono text-body font-medium text-fg" : "num font-mono text-body text-fg-2"}>{value}</dd>
     </div>
   );
 }

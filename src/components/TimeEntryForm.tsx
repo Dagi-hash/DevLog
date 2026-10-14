@@ -1,5 +1,6 @@
 "use client";
 
+import { Trash2 } from "lucide-react";
 import { useState } from "react";
 import { formatMinutes, localDayKey } from "@/lib/domain/format";
 import { PHASES, WORK_MODES, WORK_MODE_INFO, type Phase, type WorkMode } from "@/lib/domain/psp";
@@ -8,7 +9,7 @@ import { isValid, validateEntry, type EntryField } from "@/lib/domain/validation
 import { addManualEntry, createId, updateEntry } from "@/lib/state/actions";
 import { run } from "@/lib/state/store";
 import { Dialog } from "./Dialog";
-import { Button, Field, InlineAlert, Segmented, Select, TextArea, TextInput } from "./ui";
+import { Button, Field, InlineAlert, ModeGlyph, Segmented, Select, TextArea, TextInput } from "./ui";
 
 interface TimeEntryFormProps {
   open: boolean;
@@ -17,6 +18,8 @@ interface TimeEntryFormProps {
   entry?: TimeEntry;
   defaultProjectId?: string | null;
   onClose: () => void;
+  /** Present when editing: asks for confirmation before deleting. */
+  onDelete?: (entry: TimeEntry) => void;
 }
 
 /** Add a past entry or correct an existing one. Durations are recomputed from the times. */
@@ -45,7 +48,7 @@ function defaultTimes() {
   return { start: start.toISOString(), end: end.toISOString() };
 }
 
-function TimeEntryFormDialog({ data, entry, defaultProjectId, onClose }: TimeEntryFormProps) {
+function TimeEntryFormDialog({ data, entry, defaultProjectId, onClose, onDelete }: TimeEntryFormProps) {
   const selectable = data.projects.filter((p) => p.status !== "archived" || p.id === entry?.projectId);
   const initialProject =
     entry?.projectId ??
@@ -110,6 +113,12 @@ function TimeEntryFormDialog({ data, entry, defaultProjectId, onClose }: TimeEnt
       title={entry ? "Edit time entry" : "Add time entry"}
       footer={
         <>
+          {entry && onDelete && (
+            <Button variant="ghost" onClick={() => onDelete(entry)} className="sm:mr-auto">
+              <Trash2 aria-hidden />
+              Delete entry
+            </Button>
+          )}
           <Button onClick={onClose}>Cancel</Button>
           <Button type="submit" variant="primary">
             {entry ? "Save changes" : "Add entry"}
@@ -117,7 +126,7 @@ function TimeEntryFormDialog({ data, entry, defaultProjectId, onClose }: TimeEnt
         </>
       }
     >
-      <div className="space-y-4">
+      <div className="space-y-5">
         <Field label="Project" htmlFor="entry-project" error={show("projectId")}>
           <Select
             id="entry-project"
@@ -149,20 +158,27 @@ function TimeEntryFormDialog({ data, entry, defaultProjectId, onClose }: TimeEnt
             </Select>
           </Field>
           <div className="flex flex-col gap-1.5">
-            <span className="text-[13px] font-medium text-fg-2">Work mode</span>
+            <span className="text-meta text-fg-2">Work mode</span>
             <Segmented
               label="Work mode"
               name="entry-mode"
-              size="sm"
               value={workMode}
               onChange={setWorkMode}
-              className="flex h-10 w-full items-stretch [&>label]:h-auto"
-              options={WORK_MODES.map((m) => ({ value: m, label: WORK_MODE_INFO[m].short }))}
+              className="h-11 [&>label]:h-auto"
+              options={WORK_MODES.map((m) => ({
+                value: m,
+                label: (
+                  <>
+                    <ModeGlyph mode={m} />
+                    {WORK_MODE_INFO[m].short}
+                  </>
+                ),
+              }))}
             />
           </div>
         </div>
 
-        <fieldset className="grid grid-cols-2 gap-x-3 gap-y-4">
+        <fieldset className="grid grid-cols-2 gap-x-3 gap-y-5">
           <legend className="sr-only">Start and end</legend>
           <Field label="Start date" htmlFor="entry-start-date" error={show("startedAt")}>
             <TextInput
@@ -206,14 +222,14 @@ function TimeEntryFormDialog({ data, entry, defaultProjectId, onClose }: TimeEnt
           </Field>
         </fieldset>
 
-        <div className="grid grid-cols-2 items-start gap-3">
+        <div className="grid grid-cols-2 items-end gap-4">
           <Field label="Interruptions (min)" htmlFor="entry-interruption" error={show("interruption")}>
             <TextInput
               id="entry-interruption"
               inputMode="numeric"
               pattern="[0-9]*"
               autoComplete="off"
-              className="num"
+              className="num font-mono"
               value={interruption}
               invalid={!!show("interruption")}
               onChange={(event) => {
@@ -223,12 +239,12 @@ function TimeEntryFormDialog({ data, entry, defaultProjectId, onClose }: TimeEnt
               onFocus={(event) => event.target.select()}
             />
           </Field>
-          <div className="rounded-md border border-line bg-surface px-3 py-2">
-            <p className="text-[12px] text-fg-3">Recorded</p>
-            <p className="num text-[15px] font-semibold text-fg" data-testid="entry-net">
+          <div className="flex h-full flex-col justify-end border-l border-border pb-0.5 pl-4">
+            <p className="micro">Recorded</p>
+            <p className="num mt-1.5 font-mono text-[22px] leading-none text-fg" data-testid="entry-net">
               {validation.net === null ? "—" : formatMinutes(validation.net)}
             </p>
-            <p className="num text-[11.5px] text-fg-3">
+            <p className="num mt-1 font-mono text-tiny text-fg-3">
               {validation.gross === null ? "Check the times" : `${formatMinutes(validation.gross)} gross`}
             </p>
           </div>

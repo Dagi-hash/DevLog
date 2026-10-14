@@ -1,116 +1,165 @@
 @import "tailwindcss";
 
+/*
+ * Design tokens. Strictly monochrome: hierarchy comes from contrast, type,
+ * spacing and surface changes — never from hue.
+ */
 @theme {
-  --color-bg: #0d0f14;
-  --color-surface: #141720;
-  --color-elevated: #1a1f2a;
-  --color-raised: #212735;
-  --color-line: rgb(255 255 255 / 0.065);
-  --color-line-strong: rgb(255 255 255 / 0.11);
+  /* Surfaces */
+  --color-canvas: #0a0a0a;
+  --color-surface: #171717;
+  --color-elevated: #262626;
+  --color-inverse: #fafafa;
+  --color-inverse-fg: #0a0a0a;
+  --color-inverse-hover: #e5e5e5;
+  --color-inverse-press: #d4d4d4;
+  --color-hover: rgb(255 255 255 / 0.035);
+  --color-press: rgb(255 255 255 / 0.06);
 
-  --color-fg: #f2f3f5;
-  --color-fg-2: #969caa;
-  --color-fg-3: #676e7d;
+  /* Lines */
+  --color-hairline: #222222; /* separators on canvas */
+  --color-border: #343434; /* control and panel borders */
+  --color-border-strong: #4a4a4a;
 
-  --color-accent: #8198f5;
-  --color-accent-strong: #9aacf8;
-  --color-accent-ink: #0d0f14;
-  --color-accent-soft: rgb(129 152 245 / 0.12);
+  /* Text */
+  --color-fg: #fafafa;
+  --color-fg-2: #a3a3a3;
+  --color-fg-3: #737373;
+  --color-fg-4: #525252;
 
-  --color-over: #e2a25c;
-  --color-over-soft: rgb(226 162 92 / 0.12);
-  --color-under: #79b89a;
-  --color-under-soft: rgb(121 184 154 / 0.12);
-  --color-danger: #ec7a74;
-  --color-danger-soft: rgb(236 122 116 / 0.12);
+  /* Type */
+  --font-sans: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", Menlo, monospace;
 
-  --color-mode-manual: #aab1bf;
-  --color-mode-assisted: #8198f5;
-  --color-mode-agent: #b79be8;
+  --text-micro: 10.5px;
+  --text-micro--letter-spacing: 0.08em;
+  --text-micro--line-height: 1.3;
+  --text-tiny: 11px;
+  --text-tiny--line-height: 1.35;
+  --text-meta: 12.5px;
+  --text-meta--line-height: 1.45;
+  --text-input: 16px; /* never below 16px on iOS, or Safari zooms the page */
+  --text-body: 14px;
+  --text-body--line-height: 1.5;
+  --text-lead: 16px;
+  --text-lead--line-height: 1.4;
+  --text-heading: 20px;
+  --text-heading--line-height: 1.25;
+  --text-title: 28px;
+  --text-title--line-height: 1.15;
+  --text-figure: 40px;
+  --text-figure--line-height: 1;
+  --text-timer: 120px;
+  --text-timer--line-height: 0.9;
 
-  --font-sans: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-mono: "SF Mono", ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace;
-
-  --radius-sm: 6px;
-  --radius-md: 9px;
+  /* Shape */
+  --radius-xs: 3px;
+  --radius-sm: 5px;
+  --radius-md: 8px;
   --radius-lg: 12px;
 
-  --animate-fade-in: fade-in 160ms ease-out;
-  --animate-sheet-in: sheet-in 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
-  --animate-pulse-dot: pulse-dot 2s ease-in-out infinite;
+  /* Motion */
+  --ease-out-soft: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --animate-fade-in: fade-in 140ms ease-out;
+  --animate-sheet-in: sheet-in 220ms var(--ease-out-soft);
+  --animate-pulse-dot: pulse-dot 2.4s ease-in-out infinite;
 
   @keyframes fade-in {
     from { opacity: 0; }
     to { opacity: 1; }
   }
   @keyframes sheet-in {
-    from { opacity: 0; transform: translateY(12px) scale(0.985); }
+    from { opacity: 0; transform: translateY(10px); }
     to { opacity: 1; transform: none; }
   }
   @keyframes pulse-dot {
     0%, 100% { opacity: 1; }
-    50% { opacity: 0.35; }
+    50% { opacity: 0.25; }
   }
 }
 
 :root {
   color-scheme: dark;
-  --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-top: env(safe-area-inset-top, 0px);
-  --mobile-nav-height: 60px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --rail-width: 76px;
+  --mobile-bar-height: 56px;
+  --mobile-nav-height: 58px;
 }
 
-html {
-  background: var(--color-bg);
-  -webkit-text-size-adjust: 100%;
-  -webkit-tap-highlight-color: transparent;
+@layer base {
+  html {
+    background: var(--color-canvas);
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    background: var(--color-canvas);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+    font-size: var(--text-body);
+    text-rendering: optimizeLegibility;
+  }
+
+  html:has(dialog[open]) {
+    overflow: hidden;
+  }
+
+  ::selection {
+    background: var(--color-inverse);
+    color: var(--color-inverse-fg);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-fg);
+    outline-offset: 2px;
+  }
+
+  input,
+  select,
+  textarea,
+  button {
+    font: inherit;
+    color: inherit;
+  }
 }
 
-body {
-  background: var(--color-bg);
-  color: var(--color-fg);
-  font-family: var(--font-sans);
-  font-feature-settings: "cv11", "ss01";
-  text-rendering: optimizeLegibility;
-}
-
-html:has(dialog[open]) {
-  overflow: hidden;
-}
-
-::selection {
-  background: rgb(129 152 245 / 0.35);
-}
-
-:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 2px;
-}
-
-input,
-select,
-textarea,
-button {
-  font: inherit;
-  color: inherit;
-}
-
-/* Numbers that line up: durations, estimates, totals. */
+/* Tabular figures everywhere numbers need to line up. */
 .num {
   font-variant-numeric: tabular-nums;
 }
 
-/* ---------- Dialogs: centered on desktop, bottom sheet on phones ---------- */
+/* Small uppercase metadata labels. Use sparingly. */
+@utility micro {
+  font-size: var(--text-micro);
+  letter-spacing: var(--text-micro--letter-spacing);
+  line-height: var(--text-micro--line-height);
+  text-transform: uppercase;
+  font-weight: 500;
+  color: var(--color-fg-3);
+}
+
+/* Over-plan portion of progress bars: a hatch, so it reads without colour. */
+.hatch {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    var(--color-fg) 0 2px,
+    transparent 2px 4px
+  );
+}
+
+/* ---------- Dialogs: centred panel on desktop, bottom sheet on phones ---------- */
 dialog.app-dialog {
   margin: auto;
   padding: 0;
-  border: 1px solid var(--color-line-strong);
-  border-radius: 14px;
-  background: var(--color-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
   color: var(--color-fg);
-  width: min(100% - 32px, 480px);
+  width: min(100% - 32px, 460px);
   max-height: min(100dvh - 48px, 760px);
-  box-shadow: 0 24px 64px rgb(0 0 0 / 0.45);
+  box-shadow: 0 32px 80px rgb(0 0 0 / 0.6);
   overflow: hidden;
 }
 dialog.app-dialog[open] {
@@ -119,7 +168,7 @@ dialog.app-dialog[open] {
   animation: var(--animate-sheet-in);
 }
 dialog.app-dialog::backdrop {
-  background: rgb(5 6 9 / 0.62);
+  background: rgb(0 0 0 / 0.7);
   animation: var(--animate-fade-in);
 }
 @media (max-width: 639px) {
@@ -127,38 +176,34 @@ dialog.app-dialog::backdrop {
     margin: auto 0 0;
     width: 100%;
     max-width: 100%;
-    max-height: calc(100dvh - var(--safe-top) - 12px);
+    max-height: calc(100dvh - var(--safe-top) - 16px);
     border-radius: 16px 16px 0 0;
     border-bottom: none;
     padding-bottom: var(--safe-bottom);
   }
 }
 
-/* Native number-ish inputs without spinners. */
-input[type="number"]::-webkit-inner-spin-button,
-input[type="number"]::-webkit-outer-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
 input[type="date"],
 input[type="time"] {
-  min-height: 40px;
+  min-height: 44px;
 }
 ::-webkit-calendar-picker-indicator {
-  filter: invert(0.75);
+  filter: invert(0.7);
   cursor: pointer;
 }
+::-webkit-date-and-time-value {
+  text-align: left;
+}
 
-/* Select chevron */
 select.app-select {
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23969caa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23a3a3a3' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 12px center;
   padding-right: 34px;
 }
 select.app-select option {
-  background: var(--color-elevated);
+  background: var(--color-surface);
 }
 
 @media (prefers-reduced-motion: reduce) {

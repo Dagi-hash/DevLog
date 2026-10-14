@@ -93,8 +93,8 @@ function StopTimerDialogInner({
       footer={
         <>
           {nothingToRecord && (
-            <Button variant="danger" onClick={discard} className="sm:mr-auto">
-              Discard timer
+            <Button variant="destructive" onClick={discard} className="sm:mr-auto">
+              Discard session
             </Button>
           )}
           <Button onClick={onKeepRunning}>Keep running</Button>
@@ -104,32 +104,33 @@ function StopTimerDialogInner({
         </>
       }
     >
-      <div className="space-y-5">
-        <div className="rounded-lg border border-line bg-surface px-4 py-3">
-          <p className="truncate text-[15px] font-medium text-fg">{projectName}</p>
-          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-fg-2">
-            <span>{timer.phase}</span>
-            <ModeTag mode={timer.workMode} />
-            <span className="num font-mono text-[12.5px] text-fg-3">
-              {formatTime(timer.startedAt)} – {formatTime(new Date(endedAtMs).toISOString())}
-            </span>
-          </div>
+      <div className="space-y-6">
+        <div>
+          <p className="text-lead font-medium break-words">{projectName}</p>
+          <p className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-body text-fg-2">
+            <span className="text-fg">{timer.phase}</span>
+            <span aria-hidden className="text-fg-4">/</span>
+            <ModeTag mode={timer.workMode} className="text-body" />
+          </p>
+          <p className="num mt-1 font-mono text-meta text-fg-3">
+            {formatTime(timer.startedAt)} – {formatTime(new Date(endedAtMs).toISOString())} · {formatClock(seconds)} elapsed
+          </p>
         </div>
 
-        <dl className="grid grid-cols-2 gap-3">
-          <div>
-            <dt className="text-[12.5px] text-fg-3">Gross elapsed</dt>
-            <dd className="num mt-0.5 text-[20px] font-semibold tracking-tight" data-testid="gross-minutes">
+        <dl className="grid grid-cols-2 border-y border-border">
+          <div className="py-4 pr-4">
+            <dt className="micro">Gross</dt>
+            <dd className="num mt-2 font-mono text-[28px] leading-none text-fg-2" data-testid="gross-minutes">
               {formatMinutes(gross)}
             </dd>
-            <dd className="num font-mono text-[12px] text-fg-3">{formatClock(seconds)} · rounded to nearest minute</dd>
+            <dd className="mt-1.5 text-meta text-fg-3">Rounded to the minute</dd>
           </div>
-          <div>
-            <dt className="text-[12.5px] text-fg-3">Net recorded</dt>
-            <dd className="num mt-0.5 text-[20px] font-semibold tracking-tight text-accent" data-testid="net-minutes">
+          <div className="border-l border-border py-4 pl-4">
+            <dt className="micro text-fg-2">Net recorded</dt>
+            <dd className="num mt-2 font-mono text-[28px] leading-none text-fg" data-testid="net-minutes">
               {net === null ? "—" : formatMinutes(net)}
             </dd>
-            <dd className="text-[12px] text-fg-3">Gross minus interruptions</dd>
+            <dd className="mt-1.5 text-meta text-fg-3">Gross minus interruptions</dd>
           </div>
         </dl>
 
@@ -158,7 +159,7 @@ function StopTimerDialogInner({
               setSaveError(null);
             }}
             onFocus={(event) => event.target.select()}
-            className="num max-w-40"
+            className="num max-w-36 font-mono"
           />
         </Field>
 

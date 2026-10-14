@@ -3,11 +3,11 @@ import { EmptyState } from "@/components/EmptyState";
 
 export default function NotFound() {
   return (
-    <div className="rounded-lg border border-line bg-surface">
+    <div className="max-w-xl">
       <EmptyState
         title="Page not found"
         action={
-          <Link href="/" className="text-[14px] font-medium text-accent hover:text-accent-strong">
+          <Link href="/" className="inline-flex h-11 items-center text-body font-medium underline underline-offset-4">
             Go to Today
           </Link>
         }

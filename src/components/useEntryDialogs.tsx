@@ -21,6 +21,10 @@ export function useEntryDialogs(data: AppData, defaultProjectId?: string | null)
         entry={form?.entry}
         defaultProjectId={defaultProjectId}
         onClose={() => setForm(null)}
+        onDelete={(entry) => {
+          setForm(null);
+          setDeleting(entry);
+        }}
       />
       <ConfirmDialog
         open={deleting !== null}

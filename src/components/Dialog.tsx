@@ -63,13 +63,13 @@ export function Dialog({
 
   const body = (
     <>
-      <div className="flex items-start justify-between gap-4 px-5 pt-5 pb-1 sm:px-6">
+      <div className="flex items-start justify-between gap-4 px-5 pt-5 sm:px-6 sm:pt-6">
         <div className="min-w-0">
-          <h2 id={titleId} className="text-[17px] font-semibold tracking-tight text-fg">
+          <h2 id={titleId} className="text-heading font-semibold tracking-[-0.01em] text-fg">
             {title}
           </h2>
           {description && (
-            <div id={descriptionId} className="mt-1 text-[13.5px] leading-snug text-fg-2">
+            <div id={descriptionId} className="mt-1.5 text-body text-fg-2">
               {description}
             </div>
           )}
@@ -78,13 +78,13 @@ export function Dialog({
           type="button"
           onClick={onClose}
           aria-label="Close"
-          className="-mt-1 -mr-2 grid size-9 shrink-0 place-items-center rounded-md text-fg-3 transition-colors hover:bg-white/5 hover:text-fg"
+          className="-mt-2 -mr-2.5 grid size-11 shrink-0 place-items-center rounded-sm text-fg-3 transition-colors hover:bg-hover hover:text-fg"
         >
           <X className="size-[18px]" />
         </button>
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4 sm:px-6">{children}</div>
-      <div className="flex flex-col-reverse gap-2 border-t border-line px-5 py-4 sm:flex-row sm:justify-end sm:px-6">
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 sm:px-6">{children}</div>
+      <div className="flex flex-col-reverse gap-2 border-t border-border px-5 py-4 sm:flex-row sm:items-center sm:justify-end sm:px-6 [&>button]:h-12 sm:[&>button]:h-10">
         {footer}
       </div>
     </>
