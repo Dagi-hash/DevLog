@@ -1,0 +1,173 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #0d0f14;
+  --color-surface: #141720;
+  --color-elevated: #1a1f2a;
+  --color-raised: #212735;
+  --color-line: rgb(255 255 255 / 0.065);
+  --color-line-strong: rgb(255 255 255 / 0.11);
+
+  --color-fg: #f2f3f5;
+  --color-fg-2: #969caa;
+  --color-fg-3: #676e7d;
+
+  --color-accent: #8198f5;
+  --color-accent-strong: #9aacf8;
+  --color-accent-ink: #0d0f14;
+  --color-accent-soft: rgb(129 152 245 / 0.12);
+
+  --color-over: #e2a25c;
+  --color-over-soft: rgb(226 162 92 / 0.12);
+  --color-under: #79b89a;
+  --color-under-soft: rgb(121 184 154 / 0.12);
+  --color-danger: #ec7a74;
+  --color-danger-soft: rgb(236 122 116 / 0.12);
+
+  --color-mode-manual: #aab1bf;
+  --color-mode-assisted: #8198f5;
+  --color-mode-agent: #b79be8;
+
+  --font-sans: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "SF Mono", ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace;
+
+  --radius-sm: 6px;
+  --radius-md: 9px;
+  --radius-lg: 12px;
+
+  --animate-fade-in: fade-in 160ms ease-out;
+  --animate-sheet-in: sheet-in 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  --animate-pulse-dot: pulse-dot 2s ease-in-out infinite;
+
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes sheet-in {
+    from { opacity: 0; transform: translateY(12px) scale(0.985); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.35; }
+  }
+}
+
+:root {
+  color-scheme: dark;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-top: env(safe-area-inset-top, 0px);
+  --mobile-nav-height: 60px;
+}
+
+html {
+  background: var(--color-bg);
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-fg);
+  font-family: var(--font-sans);
+  font-feature-settings: "cv11", "ss01";
+  text-rendering: optimizeLegibility;
+}
+
+html:has(dialog[open]) {
+  overflow: hidden;
+}
+
+::selection {
+  background: rgb(129 152 245 / 0.35);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+input,
+select,
+textarea,
+button {
+  font: inherit;
+  color: inherit;
+}
+
+/* Numbers that line up: durations, estimates, totals. */
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Dialogs: centered on desktop, bottom sheet on phones ---------- */
+dialog.app-dialog {
+  margin: auto;
+  padding: 0;
+  border: 1px solid var(--color-line-strong);
+  border-radius: 14px;
+  background: var(--color-elevated);
+  color: var(--color-fg);
+  width: min(100% - 32px, 480px);
+  max-height: min(100dvh - 48px, 760px);
+  box-shadow: 0 24px 64px rgb(0 0 0 / 0.45);
+  overflow: hidden;
+}
+dialog.app-dialog[open] {
+  display: flex;
+  flex-direction: column;
+  animation: var(--animate-sheet-in);
+}
+dialog.app-dialog::backdrop {
+  background: rgb(5 6 9 / 0.62);
+  animation: var(--animate-fade-in);
+}
+@media (max-width: 639px) {
+  dialog.app-dialog {
+    margin: auto 0 0;
+    width: 100%;
+    max-width: 100%;
+    max-height: calc(100dvh - var(--safe-top) - 12px);
+    border-radius: 16px 16px 0 0;
+    border-bottom: none;
+    padding-bottom: var(--safe-bottom);
+  }
+}
+
+/* Native number-ish inputs without spinners. */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="date"],
+input[type="time"] {
+  min-height: 40px;
+}
+::-webkit-calendar-picker-indicator {
+  filter: invert(0.75);
+  cursor: pointer;
+}
+
+/* Select chevron */
+select.app-select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23969caa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 34px;
+}
+select.app-select option {
+  background: var(--color-elevated);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
