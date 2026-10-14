@@ -12,7 +12,7 @@ export default function NotFound() {
           </Link>
         }
       >
-        This address doesn’t match anything in PSP Workbench.
+        This address doesn’t match anything in DevLog.
       </EmptyState>
     </div>
   );

@@ -7,12 +7,13 @@ export interface StartPrefs {
   workMode: WorkMode;
 }
 
-const PREFS_KEY = "psp-workbench:prefs";
+const PREFS_KEY = "devlog:prefs";
+const LEGACY_PREFS_KEY = "psp-workbench:prefs";
 
 export function loadPrefs(): StartPrefs {
   const fallback: StartPrefs = { projectId: null, phase: "Plan", workMode: "manual" };
   try {
-    const raw = window.localStorage.getItem(PREFS_KEY);
+    const raw = window.localStorage.getItem(PREFS_KEY) ?? window.localStorage.getItem(LEGACY_PREFS_KEY);
     if (!raw) return fallback;
     const parsed: unknown = JSON.parse(raw);
     if (typeof parsed !== "object" || parsed === null) return fallback;

@@ -17,14 +17,14 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "PSP Workbench",
-    template: "%s — PSP Workbench",
+    default: "DevLog",
+    template: "%s — DevLog",
   },
   description: "Personal Software Process time tracking for manual, AI-assisted and agentic engineering.",
-  applicationName: "PSP Workbench",
+  applicationName: "DevLog",
   appleWebApp: {
     capable: true,
-    title: "PSP Workbench",
+    title: "DevLog",
     statusBarStyle: "black-translucent",
   },
   formatDetection: { telephone: false },

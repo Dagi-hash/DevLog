@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "PSP Workbench",
-    short_name: "PSP",
+    name: "DevLog",
+    short_name: "DevLog",
     description: "Personal Software Process time tracking.",
     start_url: "/",
     display: "standalone",

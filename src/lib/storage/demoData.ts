@@ -108,7 +108,7 @@ export function createDemoData(now: Date = new Date()): AppData {
 
   addProject(
     'demo-workbench',
-    'PSP Workbench prototype',
+    'DevLog prototype',
     'Local-first timer and planned-vs-actual tracker for the PSP course.',
     6,
     'active',

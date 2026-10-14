@@ -1,14 +1,18 @@
 "use client";
 
-import { FolderClosed, ScrollText, Settings2, Timer, X } from "lucide-react";
+import { FolderClosed, PanelLeftClose, PanelLeftOpen, ScrollText, Settings2, Timer, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { elapsedSeconds } from "@/lib/domain/calculations";
 import { formatClock } from "@/lib/domain/format";
 import type { AppData } from "@/lib/domain/types";
 import { useNow } from "@/lib/hooks/useNow";
+import { setSidebarCollapsed, useSidebarCollapsed } from "@/lib/state/uiPrefs";
 import { dismissIssue, useStoreState } from "@/lib/state/store";
+import { FocusProvider } from "./focus";
+import { FocusSession } from "./FocusSession";
+import { Monogram, Wordmark } from "./Logo";
 import { RecordingDot, cx } from "./ui";
 
 const PRIMARY_NAV = [
@@ -19,11 +23,13 @@ const PRIMARY_NAV = [
 
 const SETTINGS = { href: "/settings", label: "Settings", icon: Settings2 } as const;
 
+type NavItem = { href: string; label: string; icon: typeof Timer };
+
 function isActive(pathname: string, href: string) {
   return href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
 }
 
-/** "12:04" under an hour, "1:12:04" beyond. Compact enough for the rail and pill. */
+/** "12:04" under an hour, "1:12:04" beyond. */
 function compactClock(seconds: number) {
   const full = formatClock(seconds);
   return seconds < 3600 ? full.slice(3) : full.replace(/^0/, "");
@@ -32,156 +38,200 @@ function compactClock(seconds: number) {
 export function AppShell({ children }: { children: ReactNode }) {
   const state = useStoreState();
   const pathname = usePathname();
+  const collapsed = useSidebarCollapsed();
+
+  // The focus view opens when a session starts, and on load if a session is
+  // already running and the app opens on Today. Minimizing keeps the timer running.
+  const [initialPath] = useState(pathname);
+  const [focusPref, setFocusPref] = useState<boolean | null>(null);
   const timerData = state?.data.activeTimer ? state.data : null;
+  const focusOpen = timerData !== null && (focusPref ?? initialPath === "/");
+  const openFocus = useCallback(() => setFocusPref(true), []);
+  const minimizeFocus = useCallback(() => setFocusPref(false), []);
+  const focus = useMemo(
+    () => ({ isOpen: focusOpen, open: openFocus, minimize: minimizeFocus }),
+    [focusOpen, openFocus, minimizeFocus],
+  );
+
+  const shellStyle = {
+    "--sidebar-w": collapsed ? "var(--sidebar-collapsed)" : "var(--sidebar-expanded)",
+  } as CSSProperties;
 
   return (
-    <div className="min-h-dvh">
-      {/* Desktop: compact navigation rail */}
-      <aside className="fixed inset-y-0 left-0 z-20 hidden w-[var(--rail-width)] flex-col items-center border-r border-hairline bg-canvas py-5 md:flex">
-        <Link href="/" aria-label="PSP Workbench — Today" className="mb-8 rounded-sm p-1">
-          <Mark />
-        </Link>
-        <nav aria-label="Main" className="flex w-full flex-col items-stretch gap-1">
-          {PRIMARY_NAV.map((item) => (
-            <RailLink key={item.href} item={item} active={isActive(pathname, item.href)} />
-          ))}
-        </nav>
-        <div className="mt-auto flex w-full flex-col items-stretch gap-4">
-          {timerData && <RailTimer data={timerData} active={pathname === "/"} />}
-          <RailLink item={SETTINGS} active={isActive(pathname, SETTINGS.href)} />
-        </div>
-      </aside>
-
-      {/* Mobile: top bar with session indicator and settings */}
-      <header className="sticky top-0 z-20 border-b border-hairline bg-canvas/95 pt-[var(--safe-top)] backdrop-blur-sm md:hidden">
-        <div className="flex h-[var(--mobile-bar-height)] items-center justify-between gap-3 pr-1.5 pl-4">
-          <Link href="/" className="flex h-11 items-center gap-2.5" aria-label="PSP Workbench — Today">
-            <Mark />
-            <span className="text-body font-semibold tracking-[-0.01em]">PSP Workbench</span>
+    <FocusProvider value={focus}>
+      <div className="min-h-dvh" style={shellStyle}>
+        {/* Desktop: collapsible sidebar */}
+        <aside
+          className="fixed inset-y-0 left-0 z-20 hidden w-[var(--sidebar-w)] flex-col overflow-hidden border-r border-hairline bg-canvas py-4 transition-[width] duration-300 ease-out-soft md:flex"
+          aria-label="Sidebar"
+        >
+          <Link
+            href="/"
+            className={cx("mb-6 flex h-11 items-center rounded-sm", collapsed ? "mx-auto justify-center px-2" : "mx-3 px-3")}
+            aria-label="DevLog — Today"
+          >
+            {collapsed ? <Monogram className="size-[22px]" /> : <Wordmark className="h-[19px]" />}
           </Link>
-          <div className="flex min-w-0 items-center gap-1">
-            {timerData && pathname !== "/" && <SessionPill data={timerData} />}
+
+          <nav aria-label="Main" className="flex flex-col gap-0.5 px-2.5">
+            {PRIMARY_NAV.map((item) => (
+              <SidebarLink key={item.href} item={item} active={isActive(pathname, item.href)} collapsed={collapsed} />
+            ))}
+          </nav>
+
+          <div className="mt-auto flex flex-col gap-0.5 px-2.5">
+            {timerData && !focusOpen && <SidebarSession data={timerData} collapsed={collapsed} onOpen={openFocus} />}
+            <SidebarLink item={SETTINGS} active={isActive(pathname, SETTINGS.href)} collapsed={collapsed} />
+            <button
+              type="button"
+              onClick={() => setSidebarCollapsed(!collapsed)}
+              aria-expanded={!collapsed}
+              aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+              title={collapsed ? "Expand sidebar" : undefined}
+              className="flex h-10 items-center gap-3 rounded-md px-[15px] text-fg-3 transition-colors hover:bg-hover hover:text-fg-2"
+            >
+              {collapsed ? (
+                <PanelLeftOpen className="size-[18px] shrink-0" strokeWidth={1.7} aria-hidden />
+              ) : (
+                <PanelLeftClose className="size-[18px] shrink-0" strokeWidth={1.7} aria-hidden />
+              )}
+              <span className={cx("text-body whitespace-nowrap transition-opacity duration-200", collapsed && "opacity-0")}>
+                Collapse
+              </span>
+            </button>
+          </div>
+        </aside>
+
+        {/* Mobile: quiet top bar */}
+        <header className="sticky top-0 z-20 bg-canvas/85 pt-[var(--safe-top)] backdrop-blur-md md:hidden">
+          <div className="flex h-[var(--mobile-bar-height)] items-center justify-between pr-1.5 pl-5">
+            <Link href="/" className="flex h-11 items-center" aria-label="DevLog — Today">
+              <Wordmark className="h-[17px]" />
+            </Link>
             <Link
               href={SETTINGS.href}
               aria-label="Settings"
               aria-current={isActive(pathname, SETTINGS.href) ? "page" : undefined}
               className={cx(
-                "grid size-11 place-items-center rounded-sm transition-colors",
+                "grid size-11 place-items-center rounded-full transition-colors",
                 isActive(pathname, SETTINGS.href) ? "text-fg" : "text-fg-3 hover:text-fg",
               )}
             >
-              <Settings2 className="size-5" />
+              <Settings2 className="size-5" strokeWidth={1.7} />
             </Link>
           </div>
-        </div>
-      </header>
+        </header>
 
-      <main className="md:pl-[var(--rail-width)]">
-        <div className="mx-auto w-full max-w-[1200px] px-5 pt-6 pb-[calc(var(--mobile-nav-height)+var(--safe-bottom)+40px)] md:px-10 md:pt-12 md:pb-20 xl:px-14">
-          {state?.issue && <IssueBanner message={state.issue} />}
-          {state ? children : <LoadingState />}
-        </div>
-      </main>
+        <main className="transition-[padding] duration-300 ease-out-soft md:pl-[var(--sidebar-w)]">
+          <div className="mx-auto w-full max-w-[1080px] px-5 pt-4 pb-[calc(var(--mobile-nav-height)+var(--mobile-nav-gap)+var(--safe-bottom)+40px)] md:px-12 md:pt-14 md:pb-24">
+            {state?.issue && <IssueBanner message={state.issue} />}
+            {state ? (
+              <div key={pathname} className="animate-page-in">
+                {children}
+              </div>
+            ) : (
+              <LoadingState />
+            )}
+          </div>
+        </main>
 
-      {/* Mobile: bottom navigation */}
-      <nav
-        aria-label="Main"
-        className="fixed inset-x-0 bottom-0 z-20 border-t border-hairline bg-canvas/95 pb-[var(--safe-bottom)] backdrop-blur-sm md:hidden"
-      >
-        <ul className="grid h-[var(--mobile-nav-height)] grid-cols-3">
-          {PRIMARY_NAV.map((item) => {
-            const active = isActive(pathname, item.href);
-            const Icon = item.icon;
-            return (
-              <li key={item.href}>
-                <Link
-                  href={item.href}
-                  aria-current={active ? "page" : undefined}
-                  className={cx(
-                    "relative flex h-full flex-col items-center justify-center gap-1 text-tiny font-medium transition-colors",
-                    active ? "text-fg" : "text-fg-3",
-                  )}
-                >
-                  {active && <span aria-hidden className="absolute top-0 h-0.5 w-8 bg-fg" />}
-                  <Icon className="size-5" strokeWidth={active ? 2 : 1.6} aria-hidden />
-                  {item.label}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      </nav>
+        {/* Mobile: floating capsule navigation */}
+        <nav
+          aria-label="Main"
+          className="pointer-events-none fixed inset-x-0 bottom-[calc(var(--safe-bottom)+var(--mobile-nav-gap))] z-30 flex justify-center px-4 md:hidden"
+        >
+          <div className="pointer-events-auto flex h-[var(--mobile-nav-height)] items-center gap-1 rounded-full border border-border bg-surface/90 p-1.5 shadow-[0_16px_48px_rgb(0_0_0/0.55)] backdrop-blur-md">
+            {timerData && !focusOpen && <CapsuleSession data={timerData} onOpen={openFocus} />}
+            {PRIMARY_NAV.map((item) => (
+              <CapsuleLink key={item.href} item={item} active={isActive(pathname, item.href)} />
+            ))}
+          </div>
+        </nav>
 
-      {timerData && <TitleTicker data={timerData} />}
-    </div>
+        {state && <FocusSession data={state.data} open={focusOpen} onMinimize={minimizeFocus} />}
+        {timerData && <TitleTicker data={timerData} />}
+      </div>
+    </FocusProvider>
   );
 }
 
-function Mark() {
+function SidebarLink({ item, active, collapsed }: { item: NavItem; active: boolean; collapsed: boolean }) {
+  const Icon = item.icon;
   return (
-    <svg viewBox="0 0 24 24" className="size-6 shrink-0" aria-hidden>
-      <rect x="0.75" y="0.75" width="22.5" height="22.5" rx="5" fill="none" stroke="var(--color-border)" strokeWidth="1.5" />
-      <path d="M7.5 16.5v-9h4.2a2.8 2.8 0 0 1 0 5.6H7.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="square" />
-      <path d="M14.2 16.5h2.6" stroke="var(--color-fg-3)" strokeWidth="1.8" strokeLinecap="square" />
-    </svg>
+    <Link
+      href={item.href}
+      aria-current={active ? "page" : undefined}
+      title={collapsed ? item.label : undefined}
+      className={cx(
+        "flex h-10 items-center gap-3 rounded-md px-[15px] transition-colors duration-150",
+        active ? "bg-surface text-fg" : "text-fg-3 hover:bg-hover hover:text-fg-2",
+      )}
+    >
+      <Icon className="size-[18px] shrink-0" strokeWidth={active ? 2 : 1.7} aria-hidden />
+      <span className={cx("text-body whitespace-nowrap", collapsed && "sr-only")}>{item.label}</span>
+    </Link>
   );
 }
 
-function RailLink({
-  item,
-  active,
-}: {
-  item: { href: string; label: string; icon: typeof Timer };
-  active: boolean;
-}) {
+function SidebarSession({ data, collapsed, onOpen }: { data: AppData; collapsed: boolean; onOpen: () => void }) {
+  const now = useNow();
+  const timer = data.activeTimer!;
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      aria-label={`Return to focus session: ${timer.phase}`}
+      className={cx(
+        "mb-2 flex h-11 items-center gap-2.5 rounded-md border border-border text-left transition-colors hover:border-border-strong",
+        collapsed ? "flex-col justify-center gap-1 px-0 py-1.5 h-auto" : "px-[15px]",
+      )}
+    >
+      <RecordingDot className="size-1.5" />
+      <span className={cx("num font-mono text-fg", collapsed ? "text-tiny" : "text-meta")}>
+        {compactClock(elapsedSeconds(timer.startedAt, now))}
+      </span>
+      {!collapsed && <span className="truncate text-meta text-fg-3">{timer.phase}</span>}
+    </button>
+  );
+}
+
+function CapsuleLink({ item, active }: { item: NavItem; active: boolean }) {
   const Icon = item.icon;
   return (
     <Link
       href={item.href}
       aria-current={active ? "page" : undefined}
       className={cx(
-        "relative mx-2 flex flex-col items-center gap-1.5 rounded-sm py-2.5 text-tiny font-medium transition-colors",
-        active ? "bg-surface text-fg" : "text-fg-3 hover:bg-hover hover:text-fg-2",
+        "flex h-full items-center rounded-full transition-all duration-300 ease-out-soft",
+        active ? "gap-2 bg-elevated pr-4 pl-3.5 text-fg" : "gap-0 px-3.5 text-fg-3 active:bg-press",
       )}
     >
-      {active && <span aria-hidden className="absolute top-2.5 bottom-2.5 -left-2 w-0.5 bg-fg" />}
-      <Icon className="size-[19px]" strokeWidth={active ? 2 : 1.6} aria-hidden />
-      {item.label}
+      <Icon className="size-5 shrink-0" strokeWidth={active ? 2 : 1.7} aria-hidden />
+      <span
+        className={cx(
+          "overflow-hidden text-meta font-medium whitespace-nowrap transition-[max-width,opacity] duration-300 ease-out-soft",
+          active ? "max-w-24 opacity-100" : "max-w-0 opacity-0",
+        )}
+      >
+        {item.label}
+      </span>
     </Link>
   );
 }
 
-function RailTimer({ data, active }: { data: AppData; active: boolean }) {
+function CapsuleSession({ data, onOpen }: { data: AppData; onOpen: () => void }) {
   const now = useNow();
   const timer = data.activeTimer!;
   return (
-    <Link
-      href="/"
-      aria-label={`Session running: ${timer.phase}. Open Today.`}
-      className={cx(
-        "mx-2 flex flex-col items-center gap-1.5 rounded-sm border py-2.5 transition-colors",
-        active ? "border-hairline" : "border-border hover:border-border-strong",
-      )}
+    <button
+      type="button"
+      onClick={onOpen}
+      aria-label={`Return to focus session: ${timer.phase}`}
+      className="mr-1 flex h-full items-center gap-2 rounded-full bg-inverse pr-4 pl-3.5 text-inverse-fg transition-transform active:scale-[0.97]"
     >
-      <RecordingDot className="size-1.5" />
-      <span className="num font-mono text-tiny text-fg">{compactClock(elapsedSeconds(timer.startedAt, now))}</span>
-    </Link>
-  );
-}
-
-function SessionPill({ data }: { data: AppData }) {
-  const now = useNow();
-  const timer = data.activeTimer!;
-  return (
-    <Link
-      href="/"
-      aria-label={`Session running for ${timer.phase}. Open Today.`}
-      className="flex h-9 min-w-0 items-center gap-2 rounded-sm border border-border pr-3 pl-2.5 text-meta"
-    >
-      <RecordingDot className="size-1.5" />
-      <span className="num font-mono text-fg">{compactClock(elapsedSeconds(timer.startedAt, now))}</span>
-      <span className="max-w-[88px] truncate text-fg-3">{timer.phase}</span>
-    </Link>
+      <span aria-hidden className="size-1.5 animate-pulse-dot rounded-full bg-inverse-fg" />
+      <span className="num font-mono text-meta font-medium">{compactClock(elapsedSeconds(timer.startedAt, now))}</span>
+    </button>
   );
 }
 
@@ -189,7 +239,7 @@ function SessionPill({ data }: { data: AppData }) {
 function TitleTicker({ data }: { data: AppData }) {
   const now = useNow();
   const timer = data.activeTimer!;
-  const title = `${formatClock(elapsedSeconds(timer.startedAt, now))} · ${timer.phase} — PSP Workbench`;
+  const title = `${formatClock(elapsedSeconds(timer.startedAt, now))} · ${timer.phase} — DevLog`;
   useEffect(() => {
     const previous = document.title;
     document.title = title;
@@ -221,7 +271,6 @@ function LoadingState() {
     <div aria-busy="true" aria-label="Loading" className="space-y-5">
       <div className="h-3 w-24 bg-surface" />
       <div className="h-7 w-64 bg-surface" />
-      <div className="h-56 border-t border-hairline" />
     </div>
   );
 }

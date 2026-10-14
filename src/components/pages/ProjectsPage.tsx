@@ -12,7 +12,7 @@ import { useNow } from "@/lib/hooks/useNow";
 import { useAppData } from "@/lib/state/store";
 import { EmptyState } from "../EmptyState";
 import { ProjectForm } from "../ProjectForm";
-import { Button, PageHeader, ProgressBar, RecordingDot, StatusLabel, TabFilter } from "../ui";
+import { Button, PageHeader, ProgressBar, RecordingDot, TabFilter } from "../ui";
 
 const EMPTY_COPY: Record<ProjectStatus, string> = {
   active: "Create a project to plan its phases and start recording time.",
@@ -34,14 +34,14 @@ export function ProjectsPage() {
 
   return (
     <>
-      <PageHeader eyebrow={`${data.projects.length} project${data.projects.length === 1 ? "" : "s"}`} title="Projects">
-        <Button variant="primary" onClick={() => setCreating(true)} className="w-full sm:w-auto">
+      <PageHeader title="Projects">
+        <Button variant="primary" onClick={() => setCreating(true)} className="rounded-full">
           <Plus aria-hidden />
           New project
         </Button>
       </PageHeader>
 
-      <div className="mt-8">
+      <div className="mt-10">
         <TabFilter
           label="Filter by status"
           name="project-filter"
@@ -73,14 +73,6 @@ export function ProjectsPage() {
         </div>
       ) : (
         <ul className="mt-2">
-          <li aria-hidden className="hidden grid-cols-[minmax(0,1fr)_96px_96px_160px_112px_16px] items-center gap-6 border-b border-hairline py-3 lg:grid">
-            <span className="micro">Project</span>
-            <span className="micro text-right">Planned</span>
-            <span className="micro text-right">Actual</span>
-            <span className="micro">Progress</span>
-            <span className="micro">Last activity</span>
-            <span />
-          </li>
           {visible.map(({ project, lastActivity }) => (
             <ProjectRow key={project.id} project={project} data={data} lastActivity={lastActivity} now={now} />
           ))}
@@ -108,36 +100,26 @@ function ProjectRow({ project, data, lastActivity, now }: { project: Project; da
     <li className="border-b border-hairline">
       <Link
         href={`/projects/${project.id}`}
-        className="group grid grid-cols-[minmax(0,1fr)_16px] gap-x-4 gap-y-3 py-5 transition-colors hover:bg-hover lg:grid-cols-[minmax(0,1fr)_96px_96px_160px_112px_16px] lg:items-center lg:gap-6 lg:py-4"
+        className="group grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-6 gap-y-3 py-5 transition-colors hover:bg-hover lg:grid-cols-[minmax(0,1fr)_200px_180px_20px] lg:py-6"
       >
         <div className="min-w-0">
-          <p className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1.5">
-            <span className="text-lead font-medium break-words text-fg lg:truncate">{project.name}</span>
-            <StatusLabel status={project.status} />
+          <p className="flex min-w-0 items-center gap-3">
+            <span className="text-lead break-words text-fg lg:truncate">{project.name}</span>
             {running && (
-              <span className="inline-flex items-center gap-1.5 text-meta text-fg">
+              <span className="inline-flex shrink-0 items-center gap-1.5 text-meta text-fg-2">
                 <RecordingDot className="size-1.5" />
-                Recording
+                <span className="sr-only lg:not-sr-only">Recording</span>
               </span>
             )}
           </p>
-          {project.description && <p className="mt-1 truncate text-meta text-fg-3">{project.description}</p>}
+          <p className="mt-1 text-meta text-fg-3">{activity}</p>
         </div>
-        <ChevronRight className="mt-1 size-4 self-start text-fg-4 transition-transform group-hover:translate-x-0.5 lg:order-last lg:mt-0 lg:self-center" aria-hidden />
-
-        <p className="num hidden text-right font-mono text-body text-fg-2 lg:block">{formatMinutes(totals.original)}</p>
-        <p className="num hidden text-right font-mono text-body text-fg lg:block">{formatMinutes(totals.actual)}</p>
-        <div className="col-span-2 lg:col-span-1">
-          <p className="num mb-2.5 flex items-baseline justify-between gap-3 text-meta lg:hidden">
-            <span className="font-mono text-fg">
-              {formatMinutes(totals.actual)}
-              <span className="text-fg-3"> / {formatMinutes(totals.original)}</span>
-            </span>
-            <span className="text-fg-3">{activity}</span>
-          </p>
-          <ProgressBar actual={totals.actual} planned={totals.original} label={barLabel} />
-        </div>
-        <p className="hidden text-meta text-fg-3 lg:block">{activity}</p>
+        <p className="num text-right font-mono text-body text-fg lg:order-none">
+          {formatMinutes(totals.actual)}
+          <span className="text-fg-3"> / {formatMinutes(totals.original)}</span>
+        </p>
+        <ProgressBar className="col-span-2 lg:col-span-1" actual={totals.actual} planned={totals.original} label={barLabel} />
+        <ChevronRight className="hidden size-4 text-fg-4 transition-transform group-hover:translate-x-0.5 lg:block" aria-hidden />
       </Link>
     </li>
   );

@@ -10,7 +10,9 @@ import type { ActiveTimer, AppData, PhaseEstimate, Project, TimeEntry } from '..
 import { grossMinutesBetween } from '../domain/calculations';
 import { createDemoData } from './demoData';
 
-export const STORAGE_KEY = 'psp-workbench';
+export const STORAGE_KEY = 'devlog';
+/** Keys used by earlier builds (the app was called PSP Workbench); migrated on first load. */
+export const LEGACY_STORAGE_KEYS = ['psp-workbench'];
 export const SCHEMA_VERSION = 1;
 
 interface StoredDocument {
@@ -54,7 +56,8 @@ export function loadAppData(storage: Storage | null, now: Date = new Date()): Lo
     };
   }
 
-  const raw = storage.getItem(STORAGE_KEY);
+  let raw = storage.getItem(STORAGE_KEY);
+  if (raw === null) raw = migrateLegacy(storage);
   if (raw === null) {
     const data = createDemoData(now);
     trySave(storage, data);
@@ -78,6 +81,22 @@ export function loadAppData(storage: Storage | null, now: Date = new Date()): Lo
       : null;
   if (dropped > 0) trySave(storage, data);
   return { data, issue, persistent: true };
+}
+
+/** Moves data saved under an old key to the current one. Returns the raw document, if any. */
+function migrateLegacy(storage: Storage): string | null {
+  for (const key of LEGACY_STORAGE_KEYS) {
+    const legacy = storage.getItem(key);
+    if (legacy === null) continue;
+    try {
+      storage.setItem(STORAGE_KEY, legacy);
+      storage.removeItem(key);
+    } catch {
+      // Still usable for this session; migration retries on the next load.
+    }
+    return legacy;
+  }
+  return null;
 }
 
 function recoverFromUnreadable(storage: Storage, raw: string, now: Date): LoadResult {

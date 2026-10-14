@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import type { AppData } from "../domain/types";
 import { createProject } from "../state/actions";
 import { createDemoData } from "./demoData";
-import { SCHEMA_VERSION, STORAGE_KEY, loadAppData, saveAppData } from "./persistence";
+import { LEGACY_STORAGE_KEYS, SCHEMA_VERSION, STORAGE_KEY, loadAppData, saveAppData } from "./persistence";
 
 const NOW = new Date("2026-10-14T15:00:00.000Z");
 
@@ -88,6 +88,21 @@ describe("persistence", () => {
     expect(result.data.entries[0]?.netMinutes).toBe(good.netMinutes);
     expect(result.issue).toMatch(/4 invalid records/);
     expect(result.data.estimates).toHaveLength(demo.projects.length * 8);
+  });
+
+  it("migrates data saved under the previous app name", () => {
+    const mine: AppData = createProject(
+      { projects: [], estimates: [], entries: [], activeTimer: null },
+      { name: "Old data", description: "" },
+      NOW.toISOString(),
+      "old",
+    );
+    const legacyKey = LEGACY_STORAGE_KEYS[0]!;
+    window.localStorage.setItem(legacyKey, JSON.stringify({ version: SCHEMA_VERSION, savedAt: "", data: mine }));
+    const result = loadAppData(window.localStorage, NOW);
+    expect(result.data.projects.map((p) => p.name)).toEqual(["Old data"]);
+    expect(window.localStorage.getItem(legacyKey)).toBeNull();
+    expect(JSON.parse(window.localStorage.getItem(STORAGE_KEY)!).data.projects[0].name).toBe("Old data");
   });
 
   it("works in memory when storage is unavailable", () => {

@@ -51,8 +51,8 @@ describe("timer flow", () => {
 
     // First launch shows the demo projects.
     const projectSelect = await screen.findByLabelText("Project");
-    expect(within(projectSelect).getByRole("option", { name: "PSP Workbench prototype" })).toBeInTheDocument();
-    await user.selectOptions(projectSelect, "PSP Workbench prototype");
+    expect(within(projectSelect).getByRole("option", { name: "DevLog prototype" })).toBeInTheDocument();
+    await user.selectOptions(projectSelect, "DevLog prototype");
     await user.click(screen.getByRole("radio", { name: /^Code(?! Review)/ }));
     await user.click(screen.getByRole("radio", { name: "AI-Agent" }));
     const entriesBefore = stored().entries.length;

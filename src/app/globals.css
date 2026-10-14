@@ -63,6 +63,7 @@
   --animate-fade-in: fade-in 140ms ease-out;
   --animate-sheet-in: sheet-in 220ms var(--ease-out-soft);
   --animate-pulse-dot: pulse-dot 2.4s ease-in-out infinite;
+  --animate-page-in: page-in 260ms var(--ease-out-soft);
 
   @keyframes fade-in {
     from { opacity: 0; }
@@ -70,6 +71,10 @@
   }
   @keyframes sheet-in {
     from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes page-in {
+    from { opacity: 0; transform: translateY(4px); }
     to { opacity: 1; transform: none; }
   }
   @keyframes pulse-dot {
@@ -82,9 +87,11 @@
   color-scheme: dark;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
-  --rail-width: 76px;
+  --sidebar-collapsed: 68px;
+  --sidebar-expanded: 224px;
   --mobile-bar-height: 56px;
-  --mobile-nav-height: 58px;
+  --mobile-nav-height: 56px;
+  --mobile-nav-gap: 14px;
 }
 
 @layer base {
@@ -138,6 +145,33 @@
   text-transform: uppercase;
   font-weight: 500;
   color: var(--color-fg-3);
+}
+
+/* ---------- Focus session overlay ---------- */
+.focus-layer {
+  transition:
+    opacity 320ms var(--ease-out-soft),
+    visibility 0s linear 0s;
+}
+.focus-layer[data-open="false"] {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 240ms ease-in,
+    visibility 0s linear 240ms;
+}
+.focus-layer .focus-stage {
+  transition: transform 420ms var(--ease-out-soft);
+}
+.focus-layer[data-open="false"] .focus-stage {
+  transform: scale(0.97) translateY(8px);
+}
+html:has(.focus-layer[data-open="true"]) {
+  overflow: hidden;
+}
+.focus-tick {
+  transition: opacity 900ms linear;
 }
 
 /* Over-plan portion of progress bars: a hatch, so it reads without colour. */

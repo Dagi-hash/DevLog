@@ -37,6 +37,7 @@ function StopTimerDialogInner({
   const [touched, setTouched] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
   const savingRef = useRef(false);
 
   const seconds = elapsedSeconds(timer.startedAt, endedAtMs);
@@ -92,11 +93,13 @@ function StopTimerDialogInner({
       title="Save time entry"
       footer={
         <>
-          {nothingToRecord && (
-            <Button variant="destructive" onClick={discard} className="sm:mr-auto">
-              Discard session
-            </Button>
-          )}
+          <Button
+            variant={confirmDiscard ? "destructive" : "ghost"}
+            onClick={() => (confirmDiscard ? discard() : setConfirmDiscard(true))}
+            className="sm:mr-auto"
+          >
+            <span aria-live="polite">{confirmDiscard ? "Confirm discard" : "Discard session"}</span>
+          </Button>
           <Button onClick={onKeepRunning}>Keep running</Button>
           <Button type="submit" variant="primary" disabled={saving || nothingToRecord || (touched && !!interruptionError)}>
             {saving ? "Saving…" : "Save entry"}

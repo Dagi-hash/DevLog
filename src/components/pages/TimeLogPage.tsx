@@ -27,30 +27,25 @@ export function TimeLogPage() {
 
   return (
     <>
-      <PageHeader eyebrow="All projects" title="Time log">
-        <Button variant="primary" onClick={openAdd} disabled={!canAdd} className="w-full sm:w-auto">
+      <PageHeader title="Time log">
+        <Button variant="primary" onClick={openAdd} disabled={!canAdd} className="rounded-full">
           <Plus aria-hidden />
           Add entry
         </Button>
       </PageHeader>
 
-      <div className="mt-8 grid gap-6 border-t border-hairline pt-5 lg:grid-cols-12 lg:items-end lg:gap-x-16">
-        <div className="lg:col-span-4">
-          <p className="micro">{filtering ? "Filtered total" : "Total recorded"}</p>
-          <p className="num mt-2 font-mono text-[32px] leading-none font-light tracking-[-0.03em] text-fg lg:text-figure" aria-live="polite">
-            {formatMinutes(sumNetMinutes(filtered))}
-          </p>
-          <p className="num mt-2 text-meta text-fg-3">
-            {filtered.length} entr{filtered.length === 1 ? "y" : "ies"}
-            {filtering && ` of ${data.entries.length} · ${formatMinutes(sumNetMinutes(data.entries))} overall`}
-          </p>
-        </div>
-        <div className="grid grid-cols-2 gap-2 lg:col-span-8 lg:flex lg:justify-end">
+      <div className="mt-10 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <p className="num text-body text-fg-3" aria-live="polite">
+          <span className="font-mono text-fg">{formatMinutes(sumNetMinutes(filtered))}</span> across {filtered.length} entr
+          {filtered.length === 1 ? "y" : "ies"}
+          {filtering && <span> · {formatMinutes(sumNetMinutes(data.entries))} overall</span>}
+        </p>
+        <div className="grid grid-cols-2 gap-2 lg:flex">
           <div>
             <label className="sr-only" htmlFor="log-project">
               Filter by project
             </label>
-            <Select id="log-project" value={projectFilter} onChange={(event) => setProjectFilter(event.target.value)} className="lg:w-64">
+            <Select id="log-project" value={projectFilter} onChange={(event) => setProjectFilter(event.target.value)} className="lg:w-60">
               <option value="all">All projects</option>
               {data.projects.map((p) => (
                 <option key={p.id} value={p.id}>
@@ -67,7 +62,7 @@ export function TimeLogPage() {
               id="log-mode"
               value={modeFilter}
               onChange={(event) => setModeFilter(isWorkMode(event.target.value) ? event.target.value : "all")}
-              className="lg:w-48"
+              className="lg:w-44"
             >
               <option value="all">All work modes</option>
               {WORK_MODES.map((m) => (

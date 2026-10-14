@@ -1,6 +1,6 @@
-# PSP Workbench
+# DevLog
 
-A personal workspace for tracking the **Personal Software Process (PSP)** across manual,
+`>Log` — a quiet instrument for tracking the **Personal Software Process (PSP)** across manual,
 AI-assisted and agentic engineering. It answers four questions for one developer:
 
 1. What did I plan to spend on this project?
@@ -14,10 +14,15 @@ AI-assisted and agentic engineering. It answers four questions for one developer
 
 ## Features
 
-- **Today**: pick a project, PSP phase and work mode, then start a persistent stopwatch.
-  The running timer survives refreshes, closed tabs, browser restarts, phone locking and Mac
-  sleep, because elapsed time is always `now − saved start timestamp`, never a counter.
-  Stopping opens a dialog for interruptions and a description, then saves exactly one entry.
+- **Today**: pick a project, PSP phase and work mode, then start a session.
+- **Focus session**: starting a session opens a full-screen view.
+  - The clock sits inside a dial of 60 second-ticks, with a fading trail behind the current second.
+  - The only controls are Stop and Minimize. A minimized session stays one tap away in the
+    sidebar (desktop) or the capsule nav (mobile).
+  - The timer survives refreshes, closed tabs, browser restarts, phone locking and Mac sleep,
+    because elapsed time is always `now − saved start timestamp`, never a counter.
+  - Stop opens a sheet for interruptions and a description, then saves exactly one entry.
+    Discarding needs a second tap.
 - **Projects**: create, rename, complete, archive and restore. Completed and archived projects
   can't be timed, but their records and summaries are kept.
 - **Plan and actuals**: original and revised estimates per phase, actuals derived from saved
@@ -28,23 +33,28 @@ AI-assisted and agentic engineering. It answers four questions for one developer
 - **Settings** (sidebar on desktop, top-bar icon on mobile): data notes, reference definitions
   and a confirmed **Reset demo data**.
 
-## Design system
+## Design
 
+- **Identity:** the `>Log` wordmark is monoline geometry. A prompt chevron is followed by
+  "Log", whose "o" is a clock face. The `>L` monogram is the app icon and the collapsed
+  sidebar mark (`src/components/Logo.tsx`).
 - **Monochrome only.** Tokens live in `src/app/globals.css` (`@theme`): canvas `#0A0A0A`,
   surfaces `#171717` / `#262626`, border `#343434`, text `#FAFAFA` / `#A3A3A3` / `#737373`,
-  plus an inverse pair for primary actions. Type sizes (`micro`, `meta`, `body`, `lead`,
-  `heading`, `title`, `figure`, `timer`), radii and motion are tokens too.
-- **No colour coding.** Work modes use shape (Manual ○, AI-Assisted ◐, AI-Agent ●, drawn as SVG).
-  Over-plan time is a hatched bar segment. Variance relies on its sign. Selected states
-  invert or underline.
-- **Type:** Geist Sans for text, and Geist Mono with tabular figures for every time, duration
-  and timestamp.
-- **Desktop:** a 76px labelled navigation rail and an asymmetric 12-column workspace. On
-  Today, the running clock is the anchor. Project data uses hairline-ruled numeric columns
-  instead of cards.
-- **Mobile:** its own layout. There's a top bar with the session indicator and Settings, a
-  three-tab bottom bar, grouped phase rows instead of tables, bottom-sheet dialogs,
-  44–56px touch targets and safe-area padding.
+  plus an inverse pair for primary actions. Type sizes, radii and motion are tokens too.
+- **Less on screen.** Today shows the composer and today's entries, nothing else. A project
+  shows one figure, one bar and the phase table.
+- **No colour coding.** Work modes use shape (Manual ○, AI-Assisted ◐, AI-Agent ●, drawn as
+  SVG). Over-plan time is hatched. Variance relies on its sign.
+- **Type:** Geist Sans for text; Geist Mono with tabular figures for times and durations.
+- **Navigation:**
+  - Desktop has a quiet sidebar that collapses to an icon rail. The state is remembered.
+  - Mobile has a floating capsule nav. The current tab expands to show its label, and a
+    running session appears as a chip.
+- **Motion:** short and purposeful.
+  - Pages fade in on navigation.
+  - The focus view fades and settles in, and fades out on minimize or stop.
+  - The nav animates on selection.
+  - All of it is disabled under `prefers-reduced-motion`.
 - Icons come from `lucide-react` only.
 
 ## Rules the app enforces
@@ -70,8 +80,10 @@ is **provisional** and lives in one constant, `PHASES` in `src/lib/domain/psp.ts
 src/
   app/                    Next.js routes (/, /projects, /projects/[id], /log, /settings)
   components/
-    AppShell.tsx          Sidebar (desktop), top bar + bottom tabs (mobile), timer indicator
-    TimerPanel.tsx        Start form and running timer
+    AppShell.tsx          Collapsible sidebar (desktop), capsule nav (mobile), focus state
+    FocusSession.tsx      Full-screen session view with the second-tick dial
+    TimerPanel.tsx        Session composer; minimized-session card
+    Logo.tsx              >Log wordmark and >L monogram
     StopTimerDialog.tsx   Interruptions, net duration, save / keep running / discard
     ProjectSummary.tsx    Planned-vs-actual table (desktop) and cards (mobile)
     EstimateEditor.tsx    Inline minutes input
@@ -91,7 +103,9 @@ Every change goes through `run(action)` in `store.ts`. It applies a pure action 
 `actions.ts`, writes the result to `localStorage`, and only then updates the UI. If the
 write fails (storage full or blocked), nothing changes and the user sees an error.
 
-Stored data is one versioned JSON document under the key `psp-workbench`. On load:
+Stored data is one versioned JSON document under the key `devlog`. On load:
+
+- Data saved by earlier builds under `psp-workbench` is moved to the new key.
 
 - Missing data seeds the demo dataset.
 - Unreadable data is copied to a backup key and replaced with the demo dataset, with a notice.

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 import { buildProjectSummary, variancePercent } from "@/lib/domain/calculations";
-import { formatDate, formatMinutes, formatPercentVariance, formatSignedMinutes } from "@/lib/domain/format";
+import { formatMinutes, formatPercentVariance, formatSignedMinutes } from "@/lib/domain/format";
 import type { ProjectStatus } from "@/lib/domain/psp";
 import { setProjectStatus } from "@/lib/state/actions";
 import { run, useAppData } from "@/lib/state/store";
@@ -56,7 +56,6 @@ export function ProjectDetailPage() {
         <div className="min-w-0 lg:col-span-7">
           <div className="mb-3 flex flex-wrap items-center gap-3">
             <StatusLabel status={project.status} />
-            <span className="num font-mono text-meta text-fg-3">Created {formatDate(project.createdAt, { year: "numeric" })}</span>
           </div>
           <h1 className="text-title font-semibold tracking-[-0.02em] break-words text-fg">{project.name}</h1>
           {project.description && <p className="mt-3 max-w-2xl text-body leading-relaxed break-words text-fg-2">{project.description}</p>}
@@ -112,42 +111,41 @@ export function ProjectDetailPage() {
         </p>
       )}
 
-      {/* One dominant figure, supporting figures set as a line of type — not cards. */}
-      <section aria-label="Totals" className="mt-10 border-t border-hairline pt-6 lg:mt-14">
-        <div className="grid gap-6 lg:grid-cols-12 lg:items-end lg:gap-x-16">
-          <div className="lg:col-span-5">
-            <p className="micro">Actual to date</p>
-            <p className="num mt-2 font-mono text-figure font-light tracking-[-0.03em] text-fg">{formatMinutes(totals.actual)}</p>
-            <p className="mt-2 text-meta text-fg-3">
-              {entries.length} entr{entries.length === 1 ? "y" : "ies"}
-            </p>
-          </div>
-          <dl className="grid grid-cols-3 gap-4 lg:col-span-7">
-            <Figure label="Original plan" value={formatMinutes(totals.original)} />
-            <Figure label="Revised forecast" value={totals.revised === null ? "—" : formatMinutes(totals.revised)} />
-            <Figure
-              label="Δ original"
-              value={`${formatSignedMinutes(diff)}m`}
-              note={formatPercentVariance(variancePercent(totals.actual, totals.original))}
-            />
-          </dl>
-        </div>
+      {/* One figure, one line of context, one bar. Details live in the table below. */}
+      <section aria-label="Totals" className="mt-12 lg:mt-16">
+        <p className="num font-mono text-figure font-light tracking-[-0.035em] text-fg">
+          {formatMinutes(totals.actual)}
+          <span className="ml-3 align-middle font-sans text-body font-normal tracking-normal text-fg-3">
+            of {formatMinutes(totals.original)} planned
+          </span>
+        </p>
         <ProgressBar
-          className="mt-6"
+          className="mt-6 max-w-xl"
           actual={totals.actual}
           planned={totals.original}
           label={`${formatMinutes(totals.actual)} recorded of ${formatMinutes(totals.original)} originally planned`}
         />
+        <p className="num mt-3 text-meta text-fg-3">
+          <span className="font-mono text-fg-2">
+            {formatSignedMinutes(diff)}m · {formatPercentVariance(variancePercent(totals.actual, totals.original))}
+          </span>{" "}
+          against the original plan
+          {totals.revised !== null && (
+            <>
+              {" "}· forecast <span className="font-mono text-fg-2">{formatMinutes(totals.revised)}</span>
+            </>
+          )}
+        </p>
       </section>
 
-      <section className="mt-14 lg:mt-20" aria-labelledby="plan-heading">
+      <section className="mt-16 lg:mt-24" aria-labelledby="plan-heading">
         <h2 id="plan-heading" className="mb-4 text-heading font-semibold tracking-[-0.01em]">
           Plan and actuals
         </h2>
         <ProjectSummary project={project} data={data} />
       </section>
 
-      <section className="mt-14 lg:mt-20" aria-labelledby="log-heading">
+      <section className="mt-16 lg:mt-24" aria-labelledby="log-heading">
         <div className="mb-4 flex items-center justify-between gap-4">
           <h2 id="log-heading" className="text-heading font-semibold tracking-[-0.01em]">
             Time log
@@ -184,14 +182,3 @@ function BackLink() {
     </Link>
   );
 }
-
-function Figure({ label, value, note }: { label: string; value: string; note?: string }) {
-  return (
-    <div className="min-w-0 border-l border-hairline pl-4">
-      <dt className="text-meta text-fg-3">{label}</dt>
-      <dd className="num mt-1.5 truncate font-mono text-lead text-fg">{value}</dd>
-      {note && <dd className="num font-mono text-meta text-fg-3">{note}</dd>}
-    </div>
-  );
-}
-

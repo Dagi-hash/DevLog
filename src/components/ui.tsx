@@ -49,7 +49,9 @@ export function Button({
     <button
       type={type}
       className={cx(
-        "inline-flex shrink-0 items-center justify-center rounded-sm font-medium whitespace-nowrap transition-colors duration-150 select-none disabled:cursor-not-allowed [&_svg]:size-4 [&_svg]:shrink-0",
+        // A caller-supplied radius (e.g. rounded-full) replaces the default.
+        /\brounded-/.test(className ?? "") ? "" : "rounded-sm",
+        "inline-flex shrink-0 items-center justify-center font-medium whitespace-nowrap transition-colors duration-150 select-none disabled:cursor-not-allowed [&_svg]:size-4 [&_svg]:shrink-0",
         variantClass[variant],
         sizeClass[size],
         className,
