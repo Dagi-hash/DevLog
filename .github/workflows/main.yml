@@ -1,0 +1,47 @@
+name: Build Android APK
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+      - name: Install dependencies
+        run: npm install
+      - name: Prepare web files
+        run: |
+          mkdir -p www/fonts www/icons
+          cp index.html app.js styles.css www/
+          for w in 300 400 500 600 700; do cp node_modules/@fontsource/inter/files/inter-latin-$w-normal.woff2 www/fonts/inter-$w.woff2; done
+          for w in 500 700 800; do cp node_modules/@fontsource/jetbrains-mono/files/jetbrains-mono-latin-$w-normal.woff2 www/fonts/jetbrains-mono-$w.woff2; done
+          pip install pillow
+          cd www && python3 ../icons.py
+      - name: Create Android project
+        run: |
+          rm -rf android
+          npx cap add android
+          python3 native.py
+          npx cap sync android
+          chmod +x android/gradlew
+      - name: Accept Android SDK licenses
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+      - name: Build APK
+        working-directory: android
+        run: ./gradlew assembleDebug --no-daemon --stacktrace
+      - name: Show built files
+        run: find android -name "*.apk"
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: LunchMate-APK
+          path: android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
