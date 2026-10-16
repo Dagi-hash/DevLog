@@ -10,38 +10,162 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 17
+
+      - name: Prepare the source for Android
+        run: |
+          cat > android_patch.py <<'PATCHPY'
+          """Turns the DevLog source into a static Android-ready site (run from the repo root, in CI only)."""
+          import os, shutil
+
+          def edit(path, pairs):
+              s = open(path).read()
+              for a, b in pairs:
+                  assert a in s, 'patch failed in %s: %s' % (path, a[:60])
+                  s = s.replace(a, b)
+              open(path, 'w').write(s)
+
+          # 1. /projects/[id] -> /project?id=...  (project ids only exist on the device)
+          os.makedirs('src/app/project', exist_ok=True)
+          open('src/app/project/page.tsx', 'w').write('''import type { Metadata } from "next";
+          import { Suspense } from "react";
+          import { ProjectDetailPage } from "@/components/pages/ProjectDetailPage";
+
+          export const metadata: Metadata = { title: "Project" };
+
+          export default function Page() {
+            return (
+              <Suspense>
+                <ProjectDetailPage />
+              </Suspense>
+            );
+          }
+          ''')
+          shutil.rmtree('src/app/projects/[id]')
+          edit('src/components/pages/ProjectDetailPage.tsx', [
+              ('import { useParams } from "next/navigation";', 'import { useSearchParams } from "next/navigation";'),
+              ('  const params = useParams<{ id: string }>();\n', '  const projectId = useSearchParams().get("id");\n'),
+              ('p.id === params.id', 'p.id === projectId'),
+          ])
+          edit('src/components/pages/ProjectsPage.tsx', [
+              ('router.push(`/projects/${id}`)', 'router.push(`/project?id=${encodeURIComponent(id)}`)'),
+              ('href={`/projects/${project.id}`}', 'href={`/project?id=${encodeURIComponent(project.id)}`}'),
+          ])
+          edit('src/components/pages/TodayPage.tsx', [
+              ('router.push(`/projects/${id}`)', 'router.push(`/project?id=${encodeURIComponent(id)}`)'),
+          ])
+          edit('src/components/AppShell.tsx', [
+              ('''function isActive(pathname: string, href: string) {
+            return href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
+          }''', '''function isActive(pathname: string, href: string) {
+            const path = pathname.length > 1 ? pathname.replace(/\\/+$/, "") : pathname;
+            if (href === "/") return path === "/";
+            if (href === "/projects" && path === "/project") return true;
+            return path === href || path.startsWith(`${href}/`);
+          }'''),
+          ])
+
+          # 2. static export + manifest allowed in a static export
+          edit('next.config.ts', [('const nextConfig: NextConfig = {', 'const nextConfig: NextConfig = {\n  output: "export",\n  images: { unoptimized: true },')])
+          edit('src/app/manifest.ts', [('export default function manifest()', 'export const dynamic = "force-static";\n\nexport default function manifest()')])
+          print('android_patch.py: source patched')
+          PATCHPY
+          python3 android_patch.py
+
       - name: Install dependencies
-        run: npm install
-      - name: Prepare web files
+        run: npx --yes pnpm@12.6.0 install --frozen-lockfile
+
+      - name: Build the web app (static export)
+        run: npx --yes pnpm@12.6.0 run build
+
+      - name: Create the Android project
         run: |
-          mkdir -p www/fonts www/icons
-          cp index.html app.js styles.css www/
-          for w in 300 400 500 600 700; do cp node_modules/@fontsource/inter/files/inter-latin-$w-normal.woff2 www/fonts/inter-$w.woff2; done
-          for w in 500 700 800; do cp node_modules/@fontsource/jetbrains-mono/files/jetbrains-mono-latin-$w-normal.woff2 www/fonts/jetbrains-mono-$w.woff2; done
-          pip install pillow
-          cd www && python3 ../icons.py
-      - name: Create Android project
-        run: |
-          rm -rf android
+          test -f out/index.html
+          mkdir -p android-wrapper
+          cp -r out android-wrapper/www
+          cd android-wrapper
+          cat > capacitor.config.json <<'CAPCFG'
+          {
+            "appId": "com.devlog.app",
+            "appName": "DevLog",
+            "webDir": "www",
+            "backgroundColor": "#0a0a0a",
+            "android": { "backgroundColor": "#0a0a0a" }
+          }
+          CAPCFG
+          cat > native.py <<'NATIVEPY'
+          """Brands the generated Android project: dark theme, launcher icons, and makes sure
+          Android packages Next.js's `_next` folder (aapt skips folders starting with "_" by default)."""
+          import glob, os
+          from PIL import Image, ImageDraw
+
+          R = 'android/app/src/main/res/'
+          BG = '#0a0a0a'
+
+          # splash + launcher background
+          for f in glob.glob(R + '**/splash.png', recursive=True):
+              os.remove(f)
+          open(R + 'drawable/splash.xml', 'w').write(
+              '<?xml version="1.0" encoding="utf-8"?>\n<shape xmlns:android="http://schemas.android.com/apk/res/android"><solid android:color="%s"/></shape>\n' % BG)
+          open(R + 'values/ic_launcher_background.xml', 'w').write(
+              '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n    <color name="ic_launcher_background">%s</color>\n</resources>\n' % BG)
+
+          # dark status bar + navigation bar
+          p = R + 'values/styles.xml'
+          s = open(p).read()
+          marker = '<item name="android:background">@null</item>'
+          assert marker in s, 'styles.xml template changed'
+          s = s.replace(marker, marker + '\n        <item name="android:statusBarColor">%s</item>\n        <item name="android:navigationBarColor">%s</item>\n        <item name="android:windowBackground">%s</item>' % (BG, BG, BG))
+          open(p, 'w').write(s)
+
+          # launcher icons from the app's own PWA icons
+          src = Image.open('www/icons/icon-512.png').convert('RGB')
+          fg = Image.open('www/icons/icon-maskable-512.png').convert('RGB')
+          for d, legacy, adaptive in [('mdpi', 48, 108), ('hdpi', 72, 162), ('xhdpi', 96, 216), ('xxhdpi', 144, 324), ('xxxhdpi', 192, 432)]:
+              a = src.resize((legacy, legacy), Image.LANCZOS)
+              a.save(f'{R}mipmap-{d}/ic_launcher.png')
+              m = Image.new('L', (legacy, legacy), 0)
+              ImageDraw.Draw(m).ellipse([0, 0, legacy - 1, legacy - 1], fill=255)
+              r = a.copy(); r.putalpha(m); r.save(f'{R}mipmap-{d}/ic_launcher_round.png')
+              fg.resize((adaptive, adaptive), Image.LANCZOS).save(f'{R}mipmap-{d}/ic_launcher_foreground.png')
+
+          # keep the "_next" folder in the APK
+          p = 'android/app/build.gradle'
+          s = open(p).read()
+          assert 'android {' in s, 'build.gradle template changed'
+          s = s.replace('android {', "android {\n    androidResources {\n        ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'\n    }", 1)
+          open(p, 'w').write(s)
+          print('native.py: done')
+          NATIVEPY
+          npm init -y
+          npm install @capacitor/core@6 @capacitor/android@6 @capacitor/cli@6
+          pip install --break-system-packages pillow
           npx cap add android
           python3 native.py
           npx cap sync android
           chmod +x android/gradlew
+
       - name: Accept Android SDK licenses
         run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+
       - name: Build APK
-        working-directory: android
+        working-directory: android-wrapper/android
         run: ./gradlew assembleDebug --no-daemon --stacktrace
-      - name: Show built files
-        run: find android -name "*.apk"
+
+      - name: Check the app files are inside the APK
+        run: |
+          APK=$(ls android-wrapper/android/app/build/outputs/apk/debug/*.apk)
+          unzip -l "$APK" | grep -q "assets/public/_next/static" || { echo "ERROR: _next folder missing from APK (blank screen)"; exit 1; }
+          unzip -l "$APK" | grep -q "assets/public/index.html" || { echo "ERROR: index.html missing from APK"; exit 1; }
+          echo "APK OK: $APK"
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: LunchMate-APK
-          path: android/app/build/outputs/apk/debug/*.apk
+          name: DevLog-APK
+          path: android-wrapper/android/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
